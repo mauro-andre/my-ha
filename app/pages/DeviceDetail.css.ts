@@ -46,9 +46,41 @@ export const headerInfo = style({
     },
 });
 
+export const nameRow = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.sm,
+});
+
 export const deviceName = style({
     fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
     fontWeight: 700,
+});
+
+export const editNameButton = style({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0.25rem",
+    borderRadius: vars.radius.sm,
+    color: vars.color.textMuted,
+    ":hover": {
+        color: vars.color.text,
+        backgroundColor: vars.color.bgSurfaceHover,
+    },
+});
+
+export const nameInput = style({
+    fontSize: "clamp(1.25rem, 3vw, 1.5rem)",
+    fontWeight: 700,
+    backgroundColor: vars.color.bgSurface,
+    border: `0.0625rem solid ${vars.color.primary}`,
+    borderRadius: vars.radius.md,
+    padding: `${vars.space.xs} ${vars.space.sm}`,
+    color: vars.color.text,
+    outline: "none",
+    width: "100%",
+    maxWidth: "20rem",
 });
 
 export const deviceMeta = style({
@@ -64,6 +96,12 @@ export const sectionTitle = style({
     fontSize: vars.fontSize.lg,
     fontWeight: 600,
     marginBottom: vars.space.md,
+});
+
+export const controlsGrid = style({
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 16rem), 1fr))",
+    gap: vars.space.sm,
 });
 
 export const infoGrid = style({

@@ -95,6 +95,25 @@ export async function syncDevices(z2mDevices: any[]) {
     }
 }
 
+// --- Send commands ---
+
+export function sendDeviceCommand(ieeeAddress: string, payload: Record<string, any>) {
+    const device = devicesByIeee.get(ieeeAddress);
+    if (!device) return;
+
+    publish(`zigbee2mqtt/${device.friendlyName}/set`, payload);
+}
+
+export function renameDevice(ieeeAddress: string, newName: string) {
+    const device = devicesByIeee.get(ieeeAddress);
+    if (!device) return;
+
+    publish("zigbee2mqtt/bridge/request/device/rename", {
+        from: device.friendlyName,
+        to: newName,
+    });
+}
+
 // --- State updates ---
 
 export async function updateDeviceState(friendlyName: string, newState: Record<string, any>) {

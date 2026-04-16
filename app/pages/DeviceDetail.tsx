@@ -1,9 +1,33 @@
 import { Link } from "@mauroandre/velojs";
-import { useLoader, useParams } from "@mauroandre/velojs/hooks";
-import type { LoaderArgs } from "@mauroandre/velojs";
-import { ArrowLeft, Chip } from "../components/icons.js";
+import { useLoader } from "@mauroandre/velojs/hooks";
+import type { LoaderArgs, ActionArgs } from "@mauroandre/velojs";
+import { useCallback, useRef } from "preact/hooks";
+import { useSignal } from "@preact/signals";
+import { ArrowLeft, Chip, Pencil } from "../components/icons.js";
+import { DeviceControl } from "../components/controls/DeviceControl.js";
+import type { GenericCapability } from "../modules/devices/device.schemas.js";
 import * as Devices from "./Devices.js";
 import * as css from "./DeviceDetail.css.js";
+
+interface CapabilityData {
+    kind: string;
+    endpoint?: string | null;
+    features?: GenericCapability[];
+    // GenericCapability fields
+    name?: string;
+    label?: string;
+    property?: string;
+    access?: number;
+    category?: string | null;
+    valueOn?: unknown;
+    valueOff?: unknown;
+    valueToggle?: string | null;
+    valueMin?: number | null;
+    valueMax?: number | null;
+    valueStep?: number | null;
+    unit?: string | null;
+    values?: string[] | null;
+}
 
 interface DeviceData {
     device: {
@@ -17,6 +41,7 @@ interface DeviceData {
         category: string;
         availability: string;
         state: Record<string, any>;
+        capabilities: CapabilityData[];
     } | null;
 }
 
@@ -39,24 +64,43 @@ export const loader = async ({ c }: LoaderArgs) => {
             category: device.category,
             availability: device.availability,
             state: device.state,
+            capabilities: device.capabilities,
         },
     } satisfies DeviceData;
 };
 
-function formatStateValue(value: unknown): string {
-    if (value === null || value === undefined) return "—";
-    if (typeof value === "boolean") return value ? "ON" : "OFF";
-    return String(value);
-}
+export const action_rename = async ({ body }: ActionArgs<{ ieee: string; newName: string }>) => {
+    const { renameDevice } = await import("../modules/devices/device.services.js");
+    renameDevice(body.ieee, body.newName);
+    return { ok: true };
+};
 
-function isOnValue(value: unknown): boolean | null {
-    if (value === "ON" || value === true) return true;
-    if (value === "OFF" || value === false) return false;
-    return null;
+export const action_command = async ({ body }: ActionArgs<{ ieee: string; property: string; value: unknown }>) => {
+    const { sendDeviceCommand } = await import("../modules/devices/device.services.js");
+    sendDeviceCommand(body.ieee, { [body.property]: body.value });
+    return { ok: true };
+};
+
+function getSettableCapabilities(capabilities: CapabilityData[]): GenericCapability[] {
+    const result: GenericCapability[] = [];
+
+    for (const cap of capabilities) {
+        if ("features" in cap && cap.features) {
+            for (const feature of cap.features) {
+                if ((feature.access & 2) && !feature.category) {
+                    result.push(feature);
+                }
+            }
+        } else if (cap.property && (cap.access ?? 0) & 2 && !cap.category) {
+            result.push(cap as GenericCapability);
+        }
+    }
+
+    return result;
 }
 
 export const Component = () => {
-    const { data } = useLoader<DeviceData>();
+    const { data, refetch } = useLoader<DeviceData>();
 
     if (!data.value) return null;
 
@@ -74,10 +118,42 @@ export const Component = () => {
         );
     }
 
-    const stateEntries = Object.entries(device.state).filter(
-        ([key]) => key !== "linkquality"
-    );
+    const settable = getSettableCapabilities(device.capabilities);
     const linkquality = device.state["linkquality"];
+    const editing = useSignal(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const handleCommand = useCallback(async (property: string, value: unknown) => {
+        await action_command({ body: { ieee: device.ieeeAddress, property, value } });
+        setTimeout(() => refetch(), 500);
+    }, [device.ieeeAddress, refetch]);
+
+    const startEditing = useCallback(() => {
+        editing.value = true;
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.value = device.friendlyName;
+                inputRef.current.focus();
+                inputRef.current.select();
+            }
+        }, 0);
+    }, [device.friendlyName]);
+
+    const confirmRename = useCallback(async () => {
+        const newName = inputRef.current?.value.trim();
+        if (!newName || newName === device.friendlyName) {
+            editing.value = false;
+            return;
+        }
+        await action_rename({ body: { ieee: device.ieeeAddress, newName } });
+        editing.value = false;
+        setTimeout(() => refetch(), 1000);
+    }, [device.ieeeAddress, device.friendlyName, refetch]);
+
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        if (e.key === "Enter") confirmRename();
+        if (e.key === "Escape") editing.value = false;
+    }, [confirmRename]);
 
     return (
         <div>
@@ -100,11 +176,41 @@ export const Component = () => {
                     <Chip size={40} />
                 </div>
                 <div class={css.headerInfo}>
-                    <span class={css.deviceName}>{device.friendlyName}</span>
+                    {editing.value ? (
+                        <input
+                            ref={inputRef}
+                            class={css.nameInput}
+                            onKeyDown={handleKeyDown}
+                            onBlur={() => confirmRename()}
+                        />
+                    ) : (
+                        <div class={css.nameRow}>
+                            <span class={css.deviceName}>{device.friendlyName}</span>
+                            <button class={css.editNameButton} onClick={startEditing}>
+                                <Pencil size={16} />
+                            </button>
+                        </div>
+                    )}
                     <span class={css.deviceMeta}>{device.model} · {device.vendor}</span>
                     <span class={css.deviceMeta}>{device.description}</span>
                 </div>
             </div>
+
+            {settable.length > 0 && (
+                <div class={css.section}>
+                    <h2 class={css.sectionTitle}>Controls</h2>
+                    <div class={css.controlsGrid}>
+                        {settable.map((cap) => (
+                            <DeviceControl
+                                key={cap.property}
+                                capability={cap}
+                                value={device.state[cap.property]}
+                                onCommand={handleCommand}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div class={css.section}>
                 <h2 class={css.sectionTitle}>Info</h2>
@@ -137,25 +243,6 @@ export const Component = () => {
                     </div>
                 </div>
             </div>
-
-            {stateEntries.length > 0 && (
-                <div class={css.section}>
-                    <h2 class={css.sectionTitle}>State</h2>
-                    <div class={css.stateGrid}>
-                        {stateEntries.map(([key, value]) => {
-                            const onOff = isOnValue(value);
-                            return (
-                                <div key={key} class={css.stateCard}>
-                                    <span class={css.stateProperty}>{key}</span>
-                                    <span class={`${css.stateValue} ${onOff === true ? css.badgeOn : onOff === false ? css.badgeOff : ""}`}>
-                                        {formatStateValue(value)}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
