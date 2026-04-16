@@ -1,8 +1,8 @@
 export const Component = () => {
     return (
-        <main style={{ maxWidth: 640, margin: "80px auto", padding: "0 20px" }}>
-            <h1>my-ha</h1>
-            <p>Automacao residencial local.</p>
-        </main>
+        <div>
+            <h1>Welcome to my-ha</h1>
+            <p>Local home automation.</p>
+        </div>
     );
 };

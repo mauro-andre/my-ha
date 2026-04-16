@@ -1,0 +1,13 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: my-ha-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+
+volumes:
+  mongo-data:
+  mongo-config:
