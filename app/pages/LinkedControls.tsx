@@ -2,7 +2,7 @@ import { useLoader } from "@mauroandre/velojs/hooks";
 import type { LoaderArgs, ActionArgs } from "@mauroandre/velojs";
 import { useCallback, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
-import { Link as LinkIcon, Plus, X } from "../components/icons.js";
+import { Link as LinkIcon, Pencil, Plus, X } from "../components/icons.js";
 import { Select } from "../components/Select.js";
 import { ConfirmModal } from "../components/ConfirmModal.js";
 import * as css from "./LinkedControls.css.js";
@@ -76,6 +76,15 @@ export const action_create = async ({ body }: ActionArgs<{ name: string }>) => {
     return { ok: true, id: control.id };
 };
 
+export const action_rename = async ({ body }: ActionArgs<{ id: string; name: string }>) => {
+    const { getLinkedControl, updateLinkedControl } = await import("../modules/linked-controls/linked-control.services.js");
+    const control = await getLinkedControl(body.id);
+    if (!control) return { error: "Not found" };
+    control.name = body.name;
+    await updateLinkedControl(control);
+    return { ok: true };
+};
+
 export const action_delete = async ({ body }: ActionArgs<{ id: string }>) => {
     const { deleteLinkedControl } = await import("../modules/linked-controls/linked-control.services.js");
     await deleteLinkedControl(body.id);
@@ -106,10 +115,12 @@ export const Component = () => {
     const { data, refetch } = useLoader<LinkedControlsData>();
     const createModalOpen = useSignal(false);
     const editControl = useSignal<LinkedControlItem | null>(null);
+    const editingName = useSignal(false);
     const deleteTarget = useSignal<string | null>(null);
     const selectedDevice = useSignal("");
     const selectedProperty = useSignal("");
     const nameRef = useRef<HTMLInputElement>(null);
+    const editNameRef = useRef<HTMLInputElement>(null);
 
     if (!data.value) return null;
 
@@ -128,6 +139,35 @@ export const Component = () => {
         if (e.key === "Enter") handleCreate();
         if (e.key === "Escape") createModalOpen.value = false;
     }, [handleCreate]);
+
+    // Rename
+    const startEditingName = useCallback(() => {
+        editingName.value = true;
+        setTimeout(() => {
+            if (editNameRef.current && editControl.value) {
+                editNameRef.current.value = editControl.value.name;
+                editNameRef.current.focus();
+                editNameRef.current.select();
+            }
+        }, 0);
+    }, []);
+
+    const confirmRename = useCallback(async () => {
+        if (!editControl.value) return;
+        const newName = editNameRef.current?.value.trim();
+        if (!newName || newName === editControl.value.name) {
+            editingName.value = false;
+            return;
+        }
+        await action_rename({ body: { id: editControl.value.id, name: newName } });
+        editingName.value = false;
+        refetch();
+    }, [refetch]);
+
+    const handleRenameKeyDown = useCallback((e: KeyboardEvent) => {
+        if (e.key === "Enter") confirmRename();
+        if (e.key === "Escape") editingName.value = false;
+    }, [confirmRename]);
 
     // Delete
     const handleConfirmDelete = useCallback(async () => {
@@ -262,7 +302,21 @@ export const Component = () => {
             {editControl.value && (
                 <div class={css.overlay} onClick={() => { editControl.value = null; }}>
                     <div class={css.modal} onClick={(e) => e.stopPropagation()}>
-                        <h3 class={css.modalTitle}>{editControl.value.name}</h3>
+                        {editingName.value ? (
+                            <input
+                                ref={editNameRef}
+                                class={css.input}
+                                onKeyDown={handleRenameKeyDown}
+                                onBlur={() => confirmRename()}
+                            />
+                        ) : (
+                            <div class={css.nameRow}>
+                                <h3 class={css.modalTitle}>{editControl.value.name}</h3>
+                                <button class={css.editNameButton} onClick={startEditingName}>
+                                    <Pencil size={16} />
+                                </button>
+                            </div>
+                        )}
 
                         <div>
                             <h4 class={css.sectionTitle}>Members</h4>

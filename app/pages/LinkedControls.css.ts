@@ -83,6 +83,25 @@ export const emptyState = style({
     fontSize: vars.fontSize.md,
 });
 
+export const nameRow = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.sm,
+});
+
+export const editNameButton = style({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "0.25rem",
+    borderRadius: vars.radius.sm,
+    color: vars.color.textMuted,
+    ":hover": {
+        color: vars.color.text,
+        backgroundColor: vars.color.bgSurfaceHover,
+    },
+});
+
 // Modals
 
 export const overlay = style({
