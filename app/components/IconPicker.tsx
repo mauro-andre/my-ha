@@ -30,13 +30,27 @@ export function IconPicker({ value, onChange, placeholder = "Select icon..." }: 
     useEffect(() => {
         if (!open.value) return;
 
-        if (triggerRef.current && dropdownRef.current) {
+        const positionDropdown = () => {
+            if (!triggerRef.current || !dropdownRef.current) return;
             const rect = triggerRef.current.getBoundingClientRect();
-            dropdownRef.current.style.top = `${rect.bottom + 4}px`;
-            dropdownRef.current.style.left = `${rect.left}px`;
-            dropdownRef.current.style.width = `${Math.max(rect.width, 280)}px`;
-        }
+            const dropdownHeight = dropdownRef.current.offsetHeight;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const openAbove = spaceBelow < dropdownHeight && rect.top > spaceBelow;
+            const width = Math.max(rect.width, 280);
 
+            dropdownRef.current.style.left = `${rect.left}px`;
+            dropdownRef.current.style.width = `${width}px`;
+
+            if (openAbove) {
+                dropdownRef.current.style.top = "";
+                dropdownRef.current.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+            } else {
+                dropdownRef.current.style.bottom = "";
+                dropdownRef.current.style.top = `${rect.bottom + 4}px`;
+            }
+        };
+
+        positionDropdown();
         setTimeout(() => searchRef.current?.focus(), 0);
 
         const handleClick = (e: MouseEvent) => {
@@ -48,11 +62,7 @@ export function IconPicker({ value, onChange, placeholder = "Select icon..." }: 
         };
 
         const handleScroll = () => {
-            if (triggerRef.current && dropdownRef.current) {
-                const rect = triggerRef.current.getBoundingClientRect();
-                dropdownRef.current.style.top = `${rect.bottom + 4}px`;
-                dropdownRef.current.style.left = `${rect.left}px`;
-            }
+            positionDropdown();
         };
 
         document.addEventListener("mousedown", handleClick);

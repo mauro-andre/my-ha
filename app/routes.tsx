@@ -9,6 +9,8 @@ import * as IrDevices from "./pages/IrDevices.js";
 import * as IrDeviceDetail from "./pages/IrDeviceDetail.js";
 import * as LinkedControls from "./pages/LinkedControls.js";
 import * as Areas from "./pages/Areas.js";
+import * as Automations from "./pages/Automations.js";
+import * as AutomationEdit from "./pages/AutomationEdit.js";
 
 export default [
     {
@@ -25,6 +27,8 @@ export default [
                     { path: "/ir-devices/:id", module: IrDeviceDetail },
                     { path: "/linked", module: LinkedControls },
                     { path: "/areas", module: Areas },
+                    { path: "/automations", module: Automations },
+                    { path: "/automations/:id", module: AutomationEdit },
                 ],
             },
         ],

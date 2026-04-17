@@ -19,6 +19,10 @@ import { loadLinkedControls, initLinkedControls } from "./modules/linked-control
 await loadLinkedControls();
 initLinkedControls();
 
+import { loadAutomations, initAutomations } from "./modules/automations/automation.services.js";
+await loadAutomations();
+initAutomations();
+
 connectMqtt();
 
 addRoutes((app) => {

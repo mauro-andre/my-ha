@@ -36,12 +36,26 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
     useEffect(() => {
         if (!open.value) return;
 
-        if (triggerRef.current && dropdownRef.current) {
+        const positionDropdown = () => {
+            if (!triggerRef.current || !dropdownRef.current) return;
             const rect = triggerRef.current.getBoundingClientRect();
-            dropdownRef.current.style.top = `${rect.bottom + 4}px`;
+            const dropdownHeight = dropdownRef.current.offsetHeight;
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const openAbove = spaceBelow < dropdownHeight && rect.top > spaceBelow;
+
             dropdownRef.current.style.left = `${rect.left}px`;
             dropdownRef.current.style.width = `${rect.width}px`;
-        }
+
+            if (openAbove) {
+                dropdownRef.current.style.top = "";
+                dropdownRef.current.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+            } else {
+                dropdownRef.current.style.bottom = "";
+                dropdownRef.current.style.top = `${rect.bottom + 4}px`;
+            }
+        };
+
+        positionDropdown();
 
         const handleClick = (e: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node) &&
@@ -51,11 +65,7 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
         };
 
         const handleScroll = () => {
-            if (triggerRef.current && dropdownRef.current) {
-                const rect = triggerRef.current.getBoundingClientRect();
-                dropdownRef.current.style.top = `${rect.bottom + 4}px`;
-                dropdownRef.current.style.left = `${rect.left}px`;
-            }
+            positionDropdown();
         };
 
         document.addEventListener("mousedown", handleClick);

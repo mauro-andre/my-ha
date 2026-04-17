@@ -2,7 +2,7 @@ import { useCallback } from "preact/hooks";
 import { Link } from "@mauroandre/velojs";
 import { usePathname } from "@mauroandre/velojs/hooks";
 import { darkTheme, lightTheme } from "../styles/theme.css.js";
-import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Sun, Moon } from "../components/icons.js";
+import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Sun, Moon } from "../components/icons.js";
 import * as css from "./MainLayout.css.js";
 
 import * as Home from "../pages/Home.js";
@@ -10,6 +10,7 @@ import * as Devices from "../pages/Devices.js";
 import * as IrDevices from "../pages/IrDevices.js";
 import * as LinkedControls from "../pages/LinkedControls.js";
 import * as Areas from "../pages/Areas.js";
+import * as Automations from "../pages/Automations.js";
 
 const navItems = [
     { module: Home, path: "/", label: "Home", Icon: HomeIcon },
@@ -17,6 +18,7 @@ const navItems = [
     { module: IrDevices, path: "/ir-devices", label: "Remotes", Icon: Aerial },
     { module: LinkedControls, path: "/linked", label: "Linked", Icon: LinkIcon },
     { module: Areas, path: "/areas", label: "Areas", Icon: Grid },
+    { module: Automations, path: "/automations", label: "Auto", Icon: Refresh },
 ];
 
 export const Component = ({ children }: { children: preact.ComponentChildren }) => {
