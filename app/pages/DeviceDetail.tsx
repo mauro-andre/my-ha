@@ -5,6 +5,7 @@ import { useCallback, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import { ArrowLeft, Chip, Pencil } from "../components/icons.js";
 import { DeviceControl } from "../components/controls/DeviceControl.js";
+import { useDeviceEvents } from "../hooks/useDeviceEvents.js";
 import type { GenericCapability } from "../modules/devices/device.schemas.js";
 import * as Devices from "./Devices.js";
 import * as css from "./DeviceDetail.css.js";
@@ -42,6 +43,7 @@ interface DeviceData {
         availability: string;
         state: Record<string, any>;
         capabilities: CapabilityData[];
+        displayLabels: Record<string, string>;
     } | null;
 }
 
@@ -65,6 +67,7 @@ export const loader = async ({ c }: LoaderArgs) => {
             availability: device.availability,
             state: device.state,
             capabilities: device.capabilities,
+            displayLabels: device.displayLabels ?? {},
         },
     } satisfies DeviceData;
 };
@@ -75,11 +78,23 @@ export const action_rename = async ({ body }: ActionArgs<{ ieee: string; newName
     return { ok: true };
 };
 
+export const action_setLabel = async ({ body }: ActionArgs<{ ieee: string; property: string; label: string }>) => {
+    const { setDisplayLabel } = await import("../modules/devices/device.services.js");
+    await setDisplayLabel(body.ieee, body.property, body.label);
+    return { ok: true };
+};
+
 export const action_command = async ({ body }: ActionArgs<{ ieee: string; property: string; value: unknown }>) => {
     const { sendDeviceCommand } = await import("../modules/devices/device.services.js");
     sendDeviceCommand(body.ieee, { [body.property]: body.value });
     return { ok: true };
 };
+
+function resolveLabel(cap: GenericCapability, displayLabels: Record<string, string>): string {
+    if (displayLabels[cap.property]) return displayLabels[cap.property]!;
+    if (cap.endpoint) return `${cap.label} ${cap.endpoint.toUpperCase()}`;
+    return cap.label;
+}
 
 function getSettableCapabilities(capabilities: CapabilityData[]): GenericCapability[] {
     const result: GenericCapability[] = [];
@@ -102,6 +117,12 @@ function getSettableCapabilities(capabilities: CapabilityData[]): GenericCapabil
 export const Component = () => {
     const { data, refetch } = useLoader<DeviceData>();
 
+    useDeviceEvents(useCallback((ieeeAddress, _state) => {
+        if (data.value?.device?.ieeeAddress === ieeeAddress) {
+            refetch();
+        }
+    }, [refetch]));
+
     if (!data.value) return null;
 
     const { device } = data.value;
@@ -121,12 +142,13 @@ export const Component = () => {
     const settable = getSettableCapabilities(device.capabilities);
     const linkquality = device.state["linkquality"];
     const editing = useSignal(false);
+    const editingLabel = useSignal<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const labelInputRef = useRef<HTMLInputElement>(null);
 
     const handleCommand = useCallback(async (property: string, value: unknown) => {
         await action_command({ body: { ieee: device.ieeeAddress, property, value } });
-        setTimeout(() => refetch(), 500);
-    }, [device.ieeeAddress, refetch]);
+    }, [device.ieeeAddress]);
 
     const startEditing = useCallback(() => {
         editing.value = true;
@@ -154,6 +176,35 @@ export const Component = () => {
         if (e.key === "Enter") confirmRename();
         if (e.key === "Escape") editing.value = false;
     }, [confirmRename]);
+
+    const startEditingLabel = useCallback((property: string, currentLabel: string) => {
+        editingLabel.value = property;
+        setTimeout(() => {
+            if (labelInputRef.current) {
+                labelInputRef.current.value = currentLabel;
+                labelInputRef.current.focus();
+                labelInputRef.current.select();
+            }
+        }, 0);
+    }, []);
+
+    const confirmLabelRename = useCallback(async () => {
+        const property = editingLabel.value;
+        if (!property) return;
+        const newLabel = labelInputRef.current?.value.trim();
+        if (!newLabel) {
+            editingLabel.value = null;
+            return;
+        }
+        await action_setLabel({ body: { ieee: device.ieeeAddress, property, label: newLabel } });
+        editingLabel.value = null;
+        refetch();
+    }, [device.ieeeAddress, refetch]);
+
+    const handleLabelKeyDown = useCallback((e: KeyboardEvent) => {
+        if (e.key === "Enter") confirmLabelRename();
+        if (e.key === "Escape") editingLabel.value = null;
+    }, [confirmLabelRename]);
 
     return (
         <div>
@@ -200,14 +251,31 @@ export const Component = () => {
                 <div class={css.section}>
                     <h2 class={css.sectionTitle}>Controls</h2>
                     <div class={css.controlsGrid}>
-                        {settable.map((cap) => (
-                            <DeviceControl
-                                key={cap.property}
-                                capability={cap}
-                                value={device.state[cap.property]}
-                                onCommand={handleCommand}
-                            />
-                        ))}
+                        {settable.map((cap) => {
+                            const label = resolveLabel(cap, device.displayLabels);
+                            return (
+                                <div key={cap.property} class={css.controlWrapper}>
+                                    <DeviceControl
+                                        capability={cap}
+                                        label={label}
+                                        value={device.state[cap.property]}
+                                        onCommand={handleCommand}
+                                    />
+                                    {editingLabel.value === cap.property ? (
+                                        <input
+                                            ref={labelInputRef}
+                                            class={css.nameInput}
+                                            onKeyDown={handleLabelKeyDown}
+                                            onBlur={() => confirmLabelRename()}
+                                        />
+                                    ) : (
+                                        <button class={css.editNameButton} onClick={() => startEditingLabel(cap.property, label)}>
+                                            <Pencil size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

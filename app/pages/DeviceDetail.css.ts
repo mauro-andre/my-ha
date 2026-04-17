@@ -88,6 +88,12 @@ export const deviceMeta = style({
     color: vars.color.textMuted,
 });
 
+export const controlWrapper = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.xs,
+});
+
 export const section = style({
     marginBottom: vars.space.lg,
 });

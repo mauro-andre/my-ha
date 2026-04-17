@@ -3,15 +3,16 @@ import type { GenericCapability } from "../../modules/devices/device.schemas.js"
 
 interface DeviceControlProps {
     capability: GenericCapability;
+    label: string;
     value: unknown;
     onCommand: (property: string, value: unknown) => void;
 }
 
-export function DeviceControl({ capability, value, onCommand }: DeviceControlProps) {
+export function DeviceControl({ capability, label, value, onCommand }: DeviceControlProps) {
     if (capability.kind === "binary" && (capability.access & 2)) {
         return (
             <BinaryControl
-                label={capability.label}
+                label={label}
                 property={capability.property}
                 value={value}
                 valueOn={capability.valueOn ?? "ON"}

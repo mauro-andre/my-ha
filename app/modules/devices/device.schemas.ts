@@ -73,9 +73,10 @@ export const deviceSchema = dbSchema({
     state: z.record(z.string(), z.any()),
     availability: z.enum(["online", "offline"]),
 
-    // Organização (definida pelo usuário depois)
+    // User customization
     areaId: z.string().nullable().optional(),
     displayName: z.string().nullable().optional(),
+    displayLabels: z.record(z.string(), z.string()).nullable().optional(), // property → custom label
     icon: z.string().nullable().optional(),
     order: z.number().nullable().optional(),
     hidden: z.boolean().nullable().optional(),

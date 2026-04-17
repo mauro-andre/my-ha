@@ -59,6 +59,7 @@ export async function syncDevices(z2mDevices: any[]) {
             availability: existing?.availability ?? "offline",
             areaId: existing?.areaId,
             displayName: existing?.displayName,
+            displayLabels: existing?.displayLabels,
             icon: existing?.icon,
             order: existing?.order,
             hidden: existing?.hidden,
@@ -112,6 +113,15 @@ export function renameDevice(ieeeAddress: string, newName: string) {
         from: device.friendlyName,
         to: newName,
     });
+}
+
+export async function setDisplayLabel(ieeeAddress: string, property: string, label: string) {
+    const device = devicesByIeee.get(ieeeAddress);
+    if (!device) return;
+
+    if (!device.displayLabels) device.displayLabels = {};
+    device.displayLabels[property] = label;
+    await repo.saveDevice(device);
 }
 
 // --- State change listeners ---

@@ -22,7 +22,8 @@ interface LinkedControlItem {
 interface DeviceOption {
     ieeeAddress: string;
     friendlyName: string;
-    properties: Array<{ property: string; kind: string; label: string }>;
+    displayLabels: Record<string, string>;
+    properties: Array<{ property: string; kind: string; label: string; endpoint?: string | null }>;
 }
 
 interface LinkedControlsData {
@@ -43,16 +44,17 @@ export const loader = async ({}: LoaderArgs) => {
             if ("features" in cap) {
                 for (const f of cap.features) {
                     if ((f.access & 2) && !f.category) {
-                        properties.push({ property: f.property, kind: f.kind, label: f.label });
+                        properties.push({ property: f.property, kind: f.kind, label: f.label, endpoint: f.endpoint });
                     }
                 }
             } else if ((cap.access & 2) && !cap.category) {
-                properties.push({ property: cap.property, kind: cap.kind, label: cap.label });
+                properties.push({ property: cap.property, kind: cap.kind, label: cap.label, endpoint: cap.endpoint });
             }
         }
         return {
             ieeeAddress: d.ieeeAddress,
             friendlyName: d.friendlyName,
+            displayLabels: d.displayLabels ?? {},
             properties,
         };
     }).filter((d) => d.properties.length > 0);
@@ -169,6 +171,17 @@ export const Component = () => {
         }
     }
 
+    // Resolve display label for a member
+    const resolveMemberLabel = (ieee: string, property: string) => {
+        const device = devices.find((d) => d.ieeeAddress === ieee);
+        if (!device) return property;
+        if (device.displayLabels[property]) return device.displayLabels[property]!;
+        const prop = device.properties.find((p) => p.property === property);
+        if (!prop) return property;
+        if (prop.endpoint) return `${prop.label} ${prop.endpoint.toUpperCase()}`;
+        return prop.label;
+    };
+
     // Filter properties by capability kind
     const getFilteredProperties = (deviceIeee: string) => {
         const device = devices.find((d) => d.ieeeAddress === deviceIeee);
@@ -261,7 +274,7 @@ export const Component = () => {
                                         <div key={i} class={css.memberCard}>
                                             <div>
                                                 <div class={css.memberInfo}>{getDeviceName(member.ieeeAddress)}</div>
-                                                <div class={css.memberProperty}>{member.property}</div>
+                                                <div class={css.memberProperty}>{resolveMemberLabel(member.ieeeAddress, member.property)}</div>
                                             </div>
                                             <button class={css.deleteButton} onClick={() => handleRemoveMember(i)}>
                                                 <X size={14} />
@@ -296,7 +309,7 @@ export const Component = () => {
                                                 { value: "", label: "Select property..." },
                                                 ...getFilteredProperties(selectedDevice.value).map((p) => ({
                                                     value: p.property,
-                                                    label: `${p.label} (${p.property})`,
+                                                    label: resolveMemberLabel(selectedDevice.value, p.property),
                                                 })),
                                             ]}
                                             value={selectedProperty.value}
