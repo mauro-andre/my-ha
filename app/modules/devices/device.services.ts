@@ -114,6 +114,16 @@ export function renameDevice(ieeeAddress: string, newName: string) {
     });
 }
 
+// --- State change listeners ---
+
+type StateChangeListener = (ieeeAddress: string, changedKeys: string[], state: Record<string, any>) => void;
+const stateListeners = new Set<StateChangeListener>();
+
+export function onStateChange(listener: StateChangeListener) {
+    stateListeners.add(listener);
+    return () => { stateListeners.delete(listener); };
+}
+
 // --- State updates ---
 
 export async function updateDeviceState(friendlyName: string, newState: Record<string, any>) {
@@ -131,6 +141,10 @@ export async function updateDeviceState(friendlyName: string, newState: Record<s
 
     if (changedKeys.length > 0) {
         console.log(`[device] ${friendlyName} → ${changedKeys.map((k) => `${k}: ${JSON.stringify(newState[k])}`).join(", ")}`);
+
+        for (const listener of stateListeners) {
+            listener(device.ieeeAddress, changedKeys, device.state);
+        }
     }
 }
 

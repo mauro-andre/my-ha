@@ -15,6 +15,24 @@ await loadDevicesFromDb();
 connectMqtt();
 
 addRoutes((app) => {
+    // SSE: stream device state changes
+    app.get("/api/devices/events", async (c) => {
+        const { streamSSE } = await import("hono/streaming");
+        const { onStateChange } = await import("./modules/devices/device.services.js");
+
+        return streamSSE(c, async (stream) => {
+            const unsubscribe = onStateChange((ieeeAddress, changedKeys, state) => {
+                stream.writeSSE({
+                    event: "state_change",
+                    data: JSON.stringify({ ieeeAddress, changedKeys, state }),
+                });
+            });
+
+            stream.onAbort(() => { unsubscribe(); });
+            await new Promise<void>(() => {});
+        });
+    });
+
     app.get("/assets/devices/:model", async (c) => {
         const model = c.req.param("model");
         const { getDeviceImagePath } = await import("./modules/devices/device.services.js");
