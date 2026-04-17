@@ -12,6 +12,10 @@ console.log(`[db] Connected to MongoDB (${mongoDb})`);
 
 await loadDevicesFromDb();
 
+import { loadLinkedControls, initLinkedControls } from "./modules/linked-controls/linked-control.services.js";
+await loadLinkedControls();
+initLinkedControls();
+
 connectMqtt();
 
 addRoutes((app) => {
