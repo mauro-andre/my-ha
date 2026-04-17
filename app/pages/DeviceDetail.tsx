@@ -279,6 +279,7 @@ export const Component = () => {
                                         capability={cap}
                                         label={label}
                                         value={device.state[cap.property]}
+                                        ieeeAddress={device.ieeeAddress}
                                         onCommand={handleCommand}
                                     />
                                     {editingLabel.value === cap.property ? (

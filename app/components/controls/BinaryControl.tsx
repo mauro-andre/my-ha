@@ -1,6 +1,8 @@
 import { useSignal } from "@preact/signals";
 import { useCallback } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import { Power } from "../icons.js";
+import { TimerBadge } from "../QuickTimer.js";
 import * as css from "./BinaryControl.css.js";
 
 interface BinaryControlProps {
@@ -10,9 +12,11 @@ interface BinaryControlProps {
     valueOn: unknown;
     valueOff: unknown;
     onToggle: (property: string, newValue: unknown) => void;
+    modalExtra?: ComponentChildren;
+    timerKey?: string;
 }
 
-export function BinaryControl({ label, property, value, valueOn, valueOff, onToggle }: BinaryControlProps) {
+export function BinaryControl({ label, property, value, valueOn, valueOff, onToggle, modalExtra, timerKey }: BinaryControlProps) {
     const modalOpen = useSignal(false);
     const isOn = value === valueOn;
 
@@ -39,7 +43,10 @@ export function BinaryControl({ label, property, value, valueOn, valueOff, onTog
                 >
                     <Power size={20} />
                 </button>
-                <span class={css.label}>{label}</span>
+                <span class={css.label}>
+                    {label}
+                    {timerKey && <TimerBadge actionKey={timerKey} />}
+                </span>
                 <span class={`${css.stateText} ${isOn ? css.stateOn : css.stateOff}`}>
                     {isOn ? "ON" : "OFF"}
                 </span>
@@ -58,6 +65,7 @@ export function BinaryControl({ label, property, value, valueOn, valueOff, onTog
                         <span class={`${css.modalState} ${isOn ? css.stateOn : css.stateOff}`}>
                             {isOn ? "ON" : "OFF"}
                         </span>
+                        {modalExtra}
                         <button class={css.modalClose} onClick={closeModal}>
                             Close
                         </button>

@@ -3,6 +3,7 @@ import type { LoaderArgs, ActionArgs } from "@mauroandre/velojs";
 import { useCallback } from "preact/hooks";
 import { DeviceControl } from "../components/controls/DeviceControl.js";
 import { CommandControl } from "../components/controls/CommandControl.js";
+import { QuickTimer } from "../components/QuickTimer.js";
 import { useDeviceEvents } from "../hooks/useDeviceEvents.js";
 import { getIcon } from "../components/icon-registry.js";
 import type { GenericCapability } from "../modules/devices/device.schemas.js";
@@ -214,6 +215,7 @@ export const Component = () => {
                                         capability={cap}
                                         label={resolveLabel(cap, device.displayLabels)}
                                         value={device.state[cap.property]}
+                                        ieeeAddress={device.ieeeAddress}
                                         onCommand={(prop, val) => handleCommand(device.ieeeAddress, prop, val)}
                                     />
                                 ))}
@@ -236,6 +238,19 @@ export const Component = () => {
                                         key={i}
                                         label={cmd.name}
                                         onFire={() => handleIrSend(cmd.blasterIeee, cmd.code)}
+                                        timerKey={`ir:${cmd.blasterIeee}:${cmd.code}`}
+                                        modalExtra={
+                                            <QuickTimer
+                                                actionKey={`ir:${cmd.blasterIeee}:${cmd.code}`}
+                                                valueOptions={[{ value: cmd.name, label: cmd.name }]}
+                                                buildAction={() => ({
+                                                    type: "ir_command",
+                                                    blasterIeee: cmd.blasterIeee,
+                                                    code: cmd.code,
+                                                })}
+                                                label={cmd.name}
+                                            />
+                                        }
                                     />
                                 ))}
                             </div>

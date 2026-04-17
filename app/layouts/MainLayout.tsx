@@ -1,6 +1,7 @@
 import { useCallback } from "preact/hooks";
 import { Link } from "@mauroandre/velojs";
 import { usePathname } from "@mauroandre/velojs/hooks";
+import type { ActionArgs } from "@mauroandre/velojs";
 import { darkTheme, lightTheme } from "../styles/theme.css.js";
 import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Sun, Moon } from "../components/icons.js";
 import * as css from "./MainLayout.css.js";
@@ -20,6 +21,77 @@ const navItems = [
     { module: Areas, path: "/areas", label: "Areas", Icon: Grid },
     { module: Automations, path: "/automations", label: "Auto", Icon: Refresh },
 ];
+
+// --- Quick Timer Actions ---
+
+export const action_createQuickTimer = async ({ body }: ActionArgs<{
+    name: string;
+    mode: "timer" | "schedule";
+    timerSeconds?: number;
+    scheduleTime?: string;
+    action: any;
+}>) => {
+    const { createAutomation } = await import("../modules/automations/automation.services.js");
+
+    const trigger = body.mode === "timer"
+        ? { type: "timer" as const, seconds: body.timerSeconds!, executeAt: new Date(Date.now() + body.timerSeconds! * 1000) }
+        : { type: "schedule" as const, time: body.scheduleTime!, days: [] as any[] };
+
+    const automation = await createAutomation({
+        name: body.name,
+        runOnce: true,
+        trigger,
+        conditions: [],
+        actions: [body.action],
+    });
+
+    let executeAt: string;
+    if (trigger.type === "timer") {
+        executeAt = trigger.executeAt.toISOString();
+    } else {
+        const { getNextScheduleDate } = await import("../modules/automations/automation.services.js");
+        executeAt = getNextScheduleDate(trigger.time, trigger.days).toISOString();
+    }
+
+    return { ok: true, id: automation.id, executeAt };
+};
+
+export const action_cancelQuickTimer = async ({ body }: ActionArgs<{ id: string }>) => {
+    const { deleteAutomation } = await import("../modules/automations/automation.services.js");
+    await deleteAutomation(body.id);
+    return { ok: true };
+};
+
+export const action_getActiveTimers = async ({}: ActionArgs<{}>) => {
+    const { getAllAutomations, getNextScheduleDate } = await import("../modules/automations/automation.services.js");
+    const automations = getAllAutomations();
+    const timers: Array<{ id: string; actionKey: string; value: string; executeAt: string }> = [];
+
+    for (const auto of automations) {
+        if (!auto.enabled || !auto.runOnce) continue;
+        if (auto.trigger.type !== "timer" && auto.trigger.type !== "schedule") continue;
+
+        for (const action of auto.actions) {
+            let actionKey = "";
+            let value = "";
+            if (action.type === "device_command") {
+                actionKey = `${action.ieeeAddress}:${action.property}`;
+                value = String(action.value);
+            } else if (action.type === "ir_command") {
+                actionKey = `ir:${action.blasterIeee}:${action.code}`;
+                value = "IR";
+            }
+
+            const executeAt = auto.trigger.type === "timer"
+                ? auto.trigger.executeAt.toISOString()
+                : getNextScheduleDate(auto.trigger.time, auto.trigger.days).toISOString();
+
+            timers.push({ id: auto.id!, actionKey, value, executeAt });
+        }
+    }
+
+    return { timers };
+};
 
 export const Component = ({ children }: { children: preact.ComponentChildren }) => {
     const pathname = usePathname();

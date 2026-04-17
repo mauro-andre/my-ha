@@ -1,14 +1,18 @@
 import { useSignal } from "@preact/signals";
 import { useCallback } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import { Play } from "../icons.js";
+import { TimerBadge } from "../QuickTimer.js";
 import * as css from "./CommandControl.css.js";
 
 interface CommandControlProps {
     label: string;
     onFire: () => void;
+    modalExtra?: ComponentChildren;
+    timerKey?: string;
 }
 
-export function CommandControl({ label, onFire }: CommandControlProps) {
+export function CommandControl({ label, onFire, modalExtra, timerKey }: CommandControlProps) {
     const modalOpen = useSignal(false);
     const fired = useSignal(false);
     const modalFired = useSignal(false);
@@ -44,7 +48,10 @@ export function CommandControl({ label, onFire }: CommandControlProps) {
                 >
                     <Play size={20} />
                 </button>
-                <span class={css.label}>{label}</span>
+                <span class={css.label}>
+                    {label}
+                    {timerKey && <TimerBadge actionKey={timerKey} />}
+                </span>
             </div>
 
             {modalOpen.value && (
@@ -57,6 +64,7 @@ export function CommandControl({ label, onFire }: CommandControlProps) {
                             <Play size={36} />
                         </button>
                         <span class={css.modalLabel}>{label}</span>
+                        {modalExtra}
                         <button class={css.modalClose} onClick={closeModal}>
                             Close
                         </button>
