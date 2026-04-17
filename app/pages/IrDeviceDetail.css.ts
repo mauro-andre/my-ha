@@ -112,9 +112,23 @@ export const addButton = style({
 });
 
 export const commandList = style({
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 14rem), 18rem))",
+    gap: vars.space.sm,
+});
+
+export const commandWrapper = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.xs,
+    width: "100%",
+});
+
+export const commandMeta = style({
     display: "flex",
     flexDirection: "column",
-    gap: vars.space.sm,
+    gap: vars.space.xs,
+    flexShrink: 0,
 });
 
 export const addBlasterRow = style({

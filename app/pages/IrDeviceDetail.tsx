@@ -3,9 +3,10 @@ import { useLoader } from "@mauroandre/velojs/hooks";
 import type { LoaderArgs, ActionArgs } from "@mauroandre/velojs";
 import { useCallback, useRef, useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
-import { ArrowLeft, Aerial, Pencil, Plus, Power, X } from "../components/icons.js";
+import { ArrowLeft, Aerial, Pencil, Plus, X } from "../components/icons.js";
 import { Select } from "../components/Select.js";
 import { ConfirmModal } from "../components/ConfirmModal.js";
+import { CommandControl } from "../components/controls/CommandControl.js";
 import * as IrDevices from "./IrDevices.js";
 import * as css from "./IrDeviceDetail.css.js";
 
@@ -371,33 +372,27 @@ export const Component = () => {
                 ) : (
                     <div class={css.commandList}>
                         {device.commands.map((cmd, i) => (
-                            <div key={i} class={css.commandCard}>
-                                <div class={css.commandInfo}>
-                                    {editingCommandIndex.value === i ? (
-                                        <input
-                                            ref={commandEditRef}
-                                            class={css.commandNameInput}
-                                            onKeyDown={handleCommandKeyDown}
-                                            onBlur={() => confirmRenameCommand()}
-                                        />
-                                    ) : (
-                                        <div class={css.commandNameRow}>
-                                            <div class={css.commandName}>{cmd.name}</div>
-                                            <button class={css.actionButton} onClick={() => startEditingCommand(i, cmd.name)}>
-                                                <Pencil size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    <div class={css.commandCode}>{cmd.code}</div>
-                                </div>
-                                <div class={css.commandActions}>
-                                    <button class={css.sendButton} onClick={() => handleSend(cmd)}>
-                                        <Power size={18} />
+                            <div key={i} class={css.commandWrapper}>
+                                <CommandControl
+                                    label={cmd.name}
+                                    onFire={() => handleSend(cmd)}
+                                />
+                                <div class={css.commandMeta}>
+                                    <button class={css.actionButton} onClick={() => startEditingCommand(i, cmd.name)}>
+                                        <Pencil size={14} />
                                     </button>
                                     <button class={css.deleteButton} onClick={() => { deleteTarget.value = { type: "command", index: i }; }}>
-                                        <X size={18} />
+                                        <X size={14} />
                                     </button>
                                 </div>
+                                {editingCommandIndex.value === i && (
+                                    <input
+                                        ref={commandEditRef}
+                                        class={css.commandNameInput}
+                                        onKeyDown={handleCommandKeyDown}
+                                        onBlur={() => confirmRenameCommand()}
+                                    />
+                                )}
                             </div>
                         ))}
                     </div>
