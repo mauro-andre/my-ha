@@ -11,6 +11,7 @@ export const card = style({
     padding: vars.space.md,
     cursor: "pointer",
     transition: "background-color 0.15s",
+    position: "relative",
     ":hover": {
         backgroundColor: vars.color.bgSurfaceHover,
     },

@@ -219,6 +219,7 @@ export function QuickTimer({ actionKey, valueOptions, buildAction, label }: Quic
 
 export function TimerBadge({ actionKey }: { actionKey: string }) {
     const display = useSignal("");
+    const timerValue = useSignal("");
 
     useEffect(() => {
         if (!storeLoaded) loadTimerStore();
@@ -231,14 +232,17 @@ export function TimerBadge({ actionKey }: { actionKey: string }) {
             const timer = timerStore.value[actionKey];
             if (!timer) {
                 display.value = "";
+                timerValue.value = "";
                 return;
             }
             const ms = new Date(timer.executeAt).getTime() - Date.now();
             if (ms <= 0) {
                 clearTimer(actionKey);
                 display.value = "";
+                timerValue.value = "";
             } else {
                 display.value = formatCountdown(ms);
+                timerValue.value = timer.value;
             }
         };
 
@@ -249,5 +253,10 @@ export function TimerBadge({ actionKey }: { actionKey: string }) {
 
     if (!display.value) return null;
 
-    return <span class={css.cardBadge}> {display.value}</span>;
+    return (
+        <span class={css.cardBadge}>
+            <span class={css.cardBadgeValue}>{timerValue.value} in </span>
+            <span class={css.cardBadgeTime}>{display.value}</span>
+        </span>
+    );
 }

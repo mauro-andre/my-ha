@@ -152,8 +152,19 @@ export const actionLabel = style({
 
 // Badge on card
 export const cardBadge = style({
+    position: "absolute",
+    bottom: vars.space.xs,
+    right: vars.space.sm,
     fontSize: vars.fontSize.xs,
+    fontVariantNumeric: "tabular-nums",
+});
+
+export const cardBadgeValue = style({
+    fontWeight: 500,
+    color: vars.color.textMuted,
+});
+
+export const cardBadgeTime = style({
     fontWeight: 600,
     color: vars.color.warning,
-    fontVariantNumeric: "tabular-nums",
 });

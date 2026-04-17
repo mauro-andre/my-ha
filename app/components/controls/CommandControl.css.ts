@@ -13,6 +13,7 @@ export const card = style({
     transition: "background-color 0.15s",
     flex: 1,
     minWidth: 0,
+    position: "relative",
     ":hover": {
         backgroundColor: vars.color.bgSurfaceHover,
     },

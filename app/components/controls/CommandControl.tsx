@@ -48,10 +48,8 @@ export function CommandControl({ label, onFire, modalExtra, timerKey }: CommandC
                 >
                     <Play size={20} />
                 </button>
-                <span class={css.label}>
-                    {label}
-                    {timerKey && <TimerBadge actionKey={timerKey} />}
-                </span>
+                <span class={css.label}>{label}</span>
+                {timerKey && <TimerBadge actionKey={timerKey} />}
             </div>
 
             {modalOpen.value && (

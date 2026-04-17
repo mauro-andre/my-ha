@@ -43,10 +43,8 @@ export function BinaryControl({ label, property, value, valueOn, valueOff, onTog
                 >
                     <Power size={20} />
                 </button>
-                <span class={css.label}>
-                    {label}
-                    {timerKey && <TimerBadge actionKey={timerKey} />}
-                </span>
+                <span class={css.label}>{label}</span>
+                {timerKey && <TimerBadge actionKey={timerKey} />}
                 <span class={`${css.stateText} ${isOn ? css.stateOn : css.stateOff}`}>
                     {isOn ? "ON" : "OFF"}
                 </span>
