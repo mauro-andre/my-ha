@@ -24,12 +24,10 @@ interface DeviceOption {
     displayLabels: Record<string, string>;
 }
 
-interface IrCommandOption {
-    irDeviceId: string;
-    irDeviceName: string;
-    commandName: string;
-    blasterIeee: string;
-    code: string;
+interface IrDeviceOption {
+    id: string;
+    name: string;
+    commands: Array<{ name: string; blasterIeee: string; code: string }>;
 }
 
 interface AutomationEditData {
@@ -42,7 +40,7 @@ interface AutomationEditData {
         actions: Action[];
     } | null;
     devices: DeviceOption[];
-    irCommands: IrCommandOption[];
+    irDevices: IrDeviceOption[];
 }
 
 export const loader = async ({ c }: LoaderArgs) => {
@@ -69,18 +67,17 @@ export const loader = async ({ c }: LoaderArgs) => {
         return { ieeeAddress: d.ieeeAddress, friendlyName: d.friendlyName, displayLabels: d.displayLabels ?? {}, properties };
     }).filter((d) => d.properties.length > 0);
 
-    const irCommands: IrCommandOption[] = [];
-    for (const ir of allIrDevices) {
-        for (const cmd of ir.commands) {
-            irCommands.push({
-                irDeviceId: ir.id!,
-                irDeviceName: ir.name,
-                commandName: cmd.name,
+    const irDevices: IrDeviceOption[] = allIrDevices
+        .filter((ir) => ir.commands.length > 0)
+        .map((ir) => ({
+            id: ir.id!,
+            name: ir.name,
+            commands: ir.commands.map((cmd) => ({
+                name: cmd.name,
                 blasterIeee: cmd.blasterIeee,
                 code: cmd.code,
-            });
-        }
-    }
+            })),
+        }));
 
     let automation: AutomationEditData["automation"] = null;
     if (id && id !== "new") {
@@ -98,7 +95,7 @@ export const loader = async ({ c }: LoaderArgs) => {
         }
     }
 
-    return { automation, devices, irCommands } satisfies AutomationEditData;
+    return { automation, devices, irDevices } satisfies AutomationEditData;
 };
 
 export const action_save = async ({ body }: ActionArgs<{
@@ -172,7 +169,7 @@ export const Component = () => {
 
     if (!data.value) return null;
 
-    const { automation, devices, irCommands } = data.value;
+    const { automation, devices, irDevices } = data.value;
 
     const name = useSignal(automation?.name ?? "");
     const runOnce = useSignal(automation?.runOnce ?? false);
@@ -207,6 +204,7 @@ export const Component = () => {
     const addActionDevice = useSignal("");
     const addActionProperty = useSignal("");
     const addActionValue = useSignal("");
+    const addActionIrDevice = useSignal("");
     const addActionIrCommand = useSignal("");
 
     // Editing signals
@@ -290,9 +288,8 @@ export const Component = () => {
             };
         }
         if (addActionType.value === "ir_command") {
-            const cmd = irCommands.find((c) =>
-                `${c.irDeviceId}:${c.commandName}` === addActionIrCommand.value
-            );
+            const irDev = irDevices.find((d) => d.id === addActionIrDevice.value);
+            const cmd = irDev?.commands.find((c) => c.name === addActionIrCommand.value);
             if (!cmd) return null;
             return { type: "ir_command", blasterIeee: cmd.blasterIeee, code: cmd.code };
         }
@@ -311,7 +308,7 @@ export const Component = () => {
         } else {
             actions.value = [...actions.value, action];
         }
-    }, [irCommands]);
+    }, [irDevices]);
 
     const startEditAction = useCallback((index: number) => {
         const action = actions.value[index];
@@ -325,10 +322,16 @@ export const Component = () => {
             addActionValue.value = String(action.value ?? "");
         } else if (action.type === "ir_command") {
             addActionType.value = "ir_command";
-            const cmd = irCommands.find((c) => c.blasterIeee === action.blasterIeee && c.code === action.code);
-            addActionIrCommand.value = cmd ? `${cmd.irDeviceId}:${cmd.commandName}` : "";
+            for (const irDev of irDevices) {
+                const cmd = irDev.commands.find((c) => c.blasterIeee === action.blasterIeee && c.code === action.code);
+                if (cmd) {
+                    addActionIrDevice.value = irDev.id;
+                    addActionIrCommand.value = cmd.name;
+                    break;
+                }
+            }
         }
-    }, [irCommands]);
+    }, [irDevices]);
 
     const cancelEditAction = useCallback(() => {
         editingActionIndex.value = null;
@@ -336,6 +339,7 @@ export const Component = () => {
         addActionDevice.value = "";
         addActionProperty.value = "";
         addActionValue.value = "";
+        addActionIrDevice.value = "";
         addActionIrCommand.value = "";
     }, []);
 
@@ -654,7 +658,13 @@ export const Component = () => {
                         <div class={css.itemInfo}>
                             {action.type === "device_command"
                                 ? `${getDeviceName(action.ieeeAddress)} → ${action.property} = ${action.value}`
-                                : `IR: send code`
+                                : (() => {
+                                    for (const irDev of irDevices) {
+                                        const cmd = irDev.commands.find((c) => c.blasterIeee === action.blasterIeee && c.code === action.code);
+                                        if (cmd) return `${irDev.name} → ${cmd.name}`;
+                                    }
+                                    return "IR: send code";
+                                })()
                             }
                         </div>
                         <button class={css.deleteButton} onClick={(e) => { e.stopPropagation(); actions.value = actions.value.filter((_, j) => j !== i); editingActionIndex.value = null; }}>
@@ -712,8 +722,11 @@ export const Component = () => {
                                     })()}
                                 </div>
                                 <button class={css.addButton} onClick={handleSaveAction} type="button">
-                                    <Plus size={14} /> Add
+                                    <Plus size={14} /> {editingActionIndex.value !== null ? "Update" : "Add"}
                                 </button>
+                                {editingActionIndex.value !== null && (
+                                    <button class={css.cancelEditButton} onClick={cancelEditAction} type="button">Cancel</button>
+                                )}
                             </>
                         )}
                     </div>
@@ -722,17 +735,30 @@ export const Component = () => {
                         <div class={css.fieldSmall}>
                             <Select
                                 options={[
-                                    { value: "", label: "Select command..." },
-                                    ...irCommands.map((c) => ({
-                                        value: `${c.irDeviceId}:${c.commandName}`,
-                                        label: `${c.irDeviceName} → ${c.commandName}`,
-                                    })),
+                                    { value: "", label: "IR Device..." },
+                                    ...irDevices.map((d) => ({ value: d.id, label: d.name })),
                                 ]}
-                                value={addActionIrCommand.value}
-                                onChange={(v) => { addActionIrCommand.value = v; }}
+                                value={addActionIrDevice.value}
+                                onChange={(v) => { addActionIrDevice.value = v; addActionIrCommand.value = ""; }}
                                 size="small"
                             />
                         </div>
+                        {addActionIrDevice.value && (
+                            <div class={css.fieldSmall}>
+                                <Select
+                                    options={[
+                                        { value: "", label: "Command..." },
+                                        ...(irDevices.find((d) => d.id === addActionIrDevice.value)?.commands.map((c) => ({
+                                            value: c.name,
+                                            label: c.name,
+                                        })) ?? []),
+                                    ]}
+                                    value={addActionIrCommand.value}
+                                    onChange={(v) => { addActionIrCommand.value = v; }}
+                                    size="small"
+                                />
+                            </div>
+                        )}
                         <button class={css.addButton} onClick={handleSaveAction} type="button">
                             <Plus size={14} /> {editingActionIndex.value !== null ? "Update" : "Add"}
                         </button>

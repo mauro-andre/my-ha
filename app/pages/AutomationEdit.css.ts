@@ -57,7 +57,7 @@ export const input = style({
 export const row = style({
     display: "flex",
     gap: vars.space.sm,
-    alignItems: "flex-end",
+    alignItems: "center",
     flexWrap: "wrap",
 });
 
@@ -118,7 +118,9 @@ export const editingLabel = style({
 });
 
 export const cancelEditButton = style({
-    padding: `${vars.space.xs} ${vars.space.md}`,
+    display: "flex",
+    alignItems: "center",
+    padding: `${vars.space.sm} ${vars.space.md}`,
     borderRadius: vars.radius.md,
     fontSize: vars.fontSize.sm,
     color: vars.color.textMuted,
