@@ -82,14 +82,22 @@ export const action_delete = async ({ body }: ActionArgs<{ id: string }>) => {
 
 export const action_addMember = async ({ body }: ActionArgs<{ id: string; ieeeAddress: string; property: string }>) => {
     const { addMember } = await import("../modules/linked-controls/linked-control.services.js");
-    await addMember(body.id, { ieeeAddress: body.ieeeAddress, property: body.property });
-    return { ok: true };
+    const control = await addMember(body.id, { ieeeAddress: body.ieeeAddress, property: body.property });
+    if (!control) return { error: "Not found" };
+    return {
+        ok: true,
+        control: { id: control.id!, name: control.name, capabilityKind: control.capabilityKind, members: control.members },
+    };
 };
 
 export const action_removeMember = async ({ body }: ActionArgs<{ id: string; index: number }>) => {
     const { removeMember } = await import("../modules/linked-controls/linked-control.services.js");
-    await removeMember(body.id, body.index);
-    return { ok: true };
+    const control = await removeMember(body.id, body.index);
+    if (!control) return { error: "Not found" };
+    return {
+        ok: true,
+        control: { id: control.id!, name: control.name, capabilityKind: control.capabilityKind, members: control.members },
+    };
 };
 
 export const Component = () => {
@@ -122,22 +130,24 @@ export const Component = () => {
     // Delete
     const handleConfirmDelete = useCallback(async () => {
         if (!deleteTarget.value) return;
-        await action_delete({ body: { id: deleteTarget.value } });
+        const idToDelete = deleteTarget.value;
+        await action_delete({ body: { id: idToDelete } });
+        if (editControl.value?.id === idToDelete) editControl.value = null;
         deleteTarget.value = null;
-        if (editControl.value?.id === deleteTarget.value) editControl.value = null;
         refetch();
     }, [refetch]);
 
     // Add member
     const handleAddMember = useCallback(async () => {
         if (!editControl.value || !selectedDevice.value || !selectedProperty.value) return;
-        await action_addMember({
+        const result = await action_addMember({
             body: {
                 id: editControl.value.id,
                 ieeeAddress: selectedDevice.value,
                 property: selectedProperty.value,
             },
-        });
+        }) as any;
+        if (result.control) editControl.value = result.control;
         selectedDevice.value = "";
         selectedProperty.value = "";
         refetch();
@@ -146,14 +156,15 @@ export const Component = () => {
     // Remove member
     const handleRemoveMember = useCallback(async (index: number) => {
         if (!editControl.value) return;
-        await action_removeMember({ body: { id: editControl.value.id, index } });
+        const result = await action_removeMember({ body: { id: editControl.value.id, index } }) as any;
+        if (result.control) editControl.value = result.control;
         refetch();
     }, [refetch]);
 
     // Update editControl when data changes
     if (editControl.value && data.value) {
         const updated = controls.find((c) => c.id === editControl.value!.id);
-        if (updated && JSON.stringify(updated) !== JSON.stringify(editControl.value)) {
+        if (updated) {
             editControl.value = updated;
         }
     }
