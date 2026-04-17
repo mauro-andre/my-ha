@@ -62,6 +62,12 @@ export const dropdown = style({
     overflow: "hidden",
 });
 
+export const optionContent = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.sm,
+});
+
 export const optionsList = scrollY();
 
 export const optionsListInner = style({

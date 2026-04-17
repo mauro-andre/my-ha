@@ -5,6 +5,8 @@ import { useCallback, useRef } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import { ArrowLeft, Chip, Pencil } from "../components/icons.js";
 import { DeviceControl } from "../components/controls/DeviceControl.js";
+import { Select } from "../components/Select.js";
+import { getIcon } from "../components/icon-registry.js";
 import { useDeviceEvents } from "../hooks/useDeviceEvents.js";
 import type { GenericCapability } from "../modules/devices/device.schemas.js";
 import * as Devices from "./Devices.js";
@@ -44,15 +46,20 @@ interface DeviceData {
         state: Record<string, any>;
         capabilities: CapabilityData[];
         displayLabels: Record<string, string>;
+        areaId: string | null;
     } | null;
+    areas: Array<{ id: string; name: string; icon: string | null }>;
 }
 
 export const loader = async ({ c }: LoaderArgs) => {
     const ieee = c.req.param("ieee");
     const { getDeviceByIeee } = await import("../modules/devices/device.services.js");
+    const { getAllAreas } = await import("../modules/areas/area.services.js");
     const device = getDeviceByIeee(ieee ?? "");
 
-    if (!device) return { device: null } satisfies DeviceData;
+    const areas = getAllAreas().map((a) => ({ id: a.id!, name: a.name, icon: a.icon ?? null }));
+
+    if (!device) return { device: null, areas } satisfies DeviceData;
 
     return {
         device: {
@@ -68,13 +75,21 @@ export const loader = async ({ c }: LoaderArgs) => {
             state: device.state,
             capabilities: device.capabilities,
             displayLabels: device.displayLabels ?? {},
+            areaId: device.areaId ?? null,
         },
+        areas,
     } satisfies DeviceData;
 };
 
 export const action_rename = async ({ body }: ActionArgs<{ ieee: string; newName: string }>) => {
     const { renameDevice } = await import("../modules/devices/device.services.js");
     renameDevice(body.ieee, body.newName);
+    return { ok: true };
+};
+
+export const action_setArea = async ({ body }: ActionArgs<{ ieee: string; areaId: string }>) => {
+    const { setDeviceArea } = await import("../modules/devices/device.services.js");
+    await setDeviceArea(body.ieee, body.areaId || null);
     return { ok: true };
 };
 
@@ -125,7 +140,7 @@ export const Component = () => {
 
     if (!data.value) return null;
 
-    const { device } = data.value;
+    const { device, areas } = data.value;
 
     if (!device) {
         return (
@@ -149,6 +164,11 @@ export const Component = () => {
     const handleCommand = useCallback(async (property: string, value: unknown) => {
         await action_command({ body: { ieee: device.ieeeAddress, property, value } });
     }, [device.ieeeAddress]);
+
+    const handleAreaChange = useCallback(async (areaId: string) => {
+        await action_setArea({ body: { ieee: device.ieeeAddress, areaId } });
+        refetch();
+    }, [device.ieeeAddress, refetch]);
 
     const startEditing = useCallback(() => {
         editing.value = true;
@@ -283,6 +303,22 @@ export const Component = () => {
             <div class={css.section}>
                 <h2 class={css.sectionTitle}>Info</h2>
                 <div class={css.infoGrid}>
+                    <div class={css.infoCard}>
+                        <span class={css.infoLabel}>Area</span>
+                        <Select
+                            options={[
+                                { value: "", label: "No area" },
+                                ...areas.map((a) => ({
+                                    value: a.id,
+                                    label: a.name,
+                                    icon: a.icon ? getIcon(a.icon) ?? undefined : undefined,
+                                })),
+                            ]}
+                            value={device.areaId ?? ""}
+                            onChange={handleAreaChange}
+                            size="small"
+                        />
+                    </div>
                     <div class={css.infoCard}>
                         <span class={css.infoLabel}>IEEE Address</span>
                         <span class={css.infoValue}>{device.ieeeAddress}</span>

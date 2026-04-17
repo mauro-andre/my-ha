@@ -5,6 +5,7 @@ import { useCallback, useRef, useEffect } from "preact/hooks";
 import { useSignal } from "@preact/signals";
 import { ArrowLeft, Aerial, Pencil, Plus, X } from "../components/icons.js";
 import { Select } from "../components/Select.js";
+import { getIcon } from "../components/icon-registry.js";
 import { ConfirmModal } from "../components/ConfirmModal.js";
 import { CommandControl } from "../components/controls/CommandControl.js";
 import * as IrDevices from "./IrDevices.js";
@@ -25,20 +26,24 @@ interface IrDeviceData {
     device: {
         id: string;
         name: string;
+        areaId: string | null;
         blasters: string[];
         commands: CommandData[];
     } | null;
     blasterNames: Record<string, string>;
     availableBlasters: BlasterInfo[];
+    areas: Array<{ id: string; name: string; icon: string | null }>;
 }
 
 export const loader = async ({ c }: LoaderArgs) => {
     const id = c.req.param("id");
     const { getIrDevice } = await import("../modules/ir-devices/ir-device.services.js");
     const { getAllDevices } = await import("../modules/devices/device.services.js");
+    const { getAllAreas } = await import("../modules/areas/area.services.js");
 
+    const areas = getAllAreas().map((a) => ({ id: a.id!, name: a.name, icon: a.icon ?? null }));
     const device = await getIrDevice(id ?? "");
-    if (!device) return { device: null, blasterNames: {}, availableBlasters: [] } satisfies IrDeviceData;
+    if (!device) return { device: null, blasterNames: {}, availableBlasters: [], areas } satisfies IrDeviceData;
 
     const allDevices = getAllDevices();
     const blasterNames: Record<string, string> = {};
@@ -56,12 +61,20 @@ export const loader = async ({ c }: LoaderArgs) => {
         device: {
             id: device.id!,
             name: device.name,
+            areaId: device.areaId ?? null,
             blasters: device.blasters,
             commands: device.commands,
         },
         blasterNames,
         availableBlasters,
+        areas,
     } satisfies IrDeviceData;
+};
+
+export const action_setArea = async ({ body }: ActionArgs<{ id: string; areaId: string }>) => {
+    const { setIrDeviceArea } = await import("../modules/ir-devices/ir-device.services.js");
+    await setIrDeviceArea(body.id, body.areaId || null);
+    return { ok: true };
 };
 
 export const action_addBlaster = async ({ body }: ActionArgs<{ id: string; blasterIeee: string }>) => {
@@ -143,7 +156,7 @@ export const Component = () => {
 
     if (!data.value) return null;
 
-    const { device, blasterNames, availableBlasters } = data.value;
+    const { device, blasterNames, availableBlasters, areas } = data.value;
 
     if (!device) {
         return (
@@ -169,6 +182,11 @@ export const Component = () => {
             }
         }, 0);
     }, [device.name]);
+
+    const handleAreaChange = useCallback(async (areaId: string) => {
+        await action_setArea({ body: { id: device.id, areaId } });
+        refetch();
+    }, [device.id, refetch]);
 
     const confirmRename = useCallback(async () => {
         const newName = nameInputRef.current?.value.trim();
@@ -320,6 +338,19 @@ export const Component = () => {
                             </button>
                         </div>
                     )}
+                    <Select
+                        options={[
+                            { value: "", label: "No area" },
+                            ...areas.map((a) => ({
+                                value: a.id,
+                                label: a.name,
+                                icon: a.icon ? getIcon(a.icon) ?? undefined : undefined,
+                            })),
+                        ]}
+                        value={device.areaId ?? ""}
+                        onChange={handleAreaChange}
+                        size="small"
+                    />
                 </div>
             </div>
 

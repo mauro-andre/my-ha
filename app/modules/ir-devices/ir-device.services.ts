@@ -36,6 +36,13 @@ export async function updateIrDevice(device: IrDevice) {
     await repo.saveIrDevice(device);
 }
 
+export async function setIrDeviceArea(id: string, areaId: string | null) {
+    const device = await repo.findIrDeviceById(id);
+    if (!device) return;
+    device.areaId = areaId;
+    await repo.saveIrDevice(device);
+}
+
 // --- Commands ---
 
 export async function addCommand(deviceId: string, command: IrCommand) {

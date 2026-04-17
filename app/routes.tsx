@@ -8,6 +8,7 @@ import * as DeviceDetail from "./pages/DeviceDetail.js";
 import * as IrDevices from "./pages/IrDevices.js";
 import * as IrDeviceDetail from "./pages/IrDeviceDetail.js";
 import * as LinkedControls from "./pages/LinkedControls.js";
+import * as Areas from "./pages/Areas.js";
 
 export default [
     {
@@ -23,6 +24,7 @@ export default [
                     { path: "/ir-devices", module: IrDevices },
                     { path: "/ir-devices/:id", module: IrDeviceDetail },
                     { path: "/linked", module: LinkedControls },
+                    { path: "/areas", module: Areas },
                 ],
             },
         ],

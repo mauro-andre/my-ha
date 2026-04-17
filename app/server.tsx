@@ -12,6 +12,9 @@ console.log(`[db] Connected to MongoDB (${mongoDb})`);
 
 await loadDevicesFromDb();
 
+import { loadAreas } from "./modules/areas/area.services.js";
+await loadAreas();
+
 import { loadLinkedControls, initLinkedControls } from "./modules/linked-controls/linked-control.services.js";
 await loadLinkedControls();
 initLinkedControls();

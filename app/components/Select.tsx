@@ -1,11 +1,13 @@
 import { useSignal } from "@preact/signals";
 import { useCallback, useEffect, useRef } from "preact/hooks";
+import type { ComponentType } from "preact";
 import { ChevronDown } from "./icons.js";
 import * as css from "./Select.css.js";
 
 interface SelectOption {
     value: string;
     label: string;
+    icon?: ComponentType<{ size?: number }>;
 }
 
 interface SelectProps {
@@ -23,7 +25,7 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
     const triggerRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const selectedLabel = options.find((o) => o.value === value)?.label;
+    const selected = options.find((o) => o.value === value);
 
     const handleSelect = useCallback((optionValue: string) => {
         onChange?.(optionValue);
@@ -34,7 +36,6 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
     useEffect(() => {
         if (!open.value) return;
 
-        // Position the dropdown below the trigger
         if (triggerRef.current && dropdownRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
             dropdownRef.current.style.top = `${rect.bottom + 4}px`;
@@ -73,9 +74,14 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
                 onClick={() => { open.value = !open.value; }}
                 type="button"
             >
-                <span class={selectedLabel ? undefined : css.triggerPlaceholder}>
-                    {selectedLabel ?? placeholder}
-                </span>
+                {selected ? (
+                    <span class={css.optionContent}>
+                        {selected.icon && <selected.icon size={18} />}
+                        {selected.label}
+                    </span>
+                ) : (
+                    <span class={css.triggerPlaceholder}>{placeholder}</span>
+                )}
                 <span class={`${css.arrow} ${open.value ? css.arrowOpen : ""}`}>
                     <ChevronDown size={14} />
                 </span>
@@ -90,7 +96,10 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
                                 class={`${css.option} ${size === "small" ? css.optionSmall : ""} ${opt.value === value ? css.optionSelected : ""}`}
                                 onClick={() => handleSelect(opt.value)}
                             >
-                                {opt.label}
+                                <span class={css.optionContent}>
+                                    {opt.icon && <opt.icon size={18} />}
+                                    {opt.label}
+                                </span>
                             </div>
                         ))}
                     </div>
@@ -99,3 +108,5 @@ export function Select({ options, value, onChange, placeholder = "Select...", si
         </div>
     );
 }
+
+export type { SelectOption };

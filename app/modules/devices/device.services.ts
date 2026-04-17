@@ -115,6 +115,13 @@ export function renameDevice(ieeeAddress: string, newName: string) {
     });
 }
 
+export async function setDeviceArea(ieeeAddress: string, areaId: string | null) {
+    const device = devicesByIeee.get(ieeeAddress);
+    if (!device) return;
+    device.areaId = areaId;
+    await repo.saveDevice(device);
+}
+
 export async function setDisplayLabel(ieeeAddress: string, property: string, label: string) {
     const device = devicesByIeee.get(ieeeAddress);
     if (!device) return;
