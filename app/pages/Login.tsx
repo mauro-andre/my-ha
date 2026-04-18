@@ -15,7 +15,7 @@ export const action_login = async ({ body, c }: ActionArgs<{ email: string; pass
     setCookie(c!, "session", result.token, {
         path: "/",
         httpOnly: true,
-        secure: process.env["NODE_ENV"] === "production",
+        secure: process.env["COOKIE_SECURE"] === "true",
         sameSite: "Lax",
         maxAge: 60 * 60 * 24 * 30,
     });
