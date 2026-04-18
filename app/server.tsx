@@ -12,6 +12,9 @@ console.log(`[db] Connected to MongoDB (${mongoDb})`);
 
 await loadDevicesFromDb();
 
+import { ensureMasterUser } from "./modules/users/user.services.js";
+await ensureMasterUser();
+
 import { loadAreas } from "./modules/areas/area.services.js";
 await loadAreas();
 
@@ -26,6 +29,16 @@ initAutomations();
 connectMqtt();
 
 addRoutes((app) => {
+    // Protect all API and asset routes with auth middleware
+    app.use("/api/*", async (c, next) => {
+        const { authMiddleware } = await import("./modules/users/auth.middleware.js");
+        return authMiddleware(c, next);
+    });
+    app.use("/assets/*", async (c, next) => {
+        const { authMiddleware } = await import("./modules/users/auth.middleware.js");
+        return authMiddleware(c, next);
+    });
+
     // SSE: stream device state changes
     app.get("/api/devices/events", async (c) => {
         const { streamSSE } = await import("hono/streaming");

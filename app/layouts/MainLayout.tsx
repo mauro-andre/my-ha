@@ -1,9 +1,10 @@
-import { useCallback } from "preact/hooks";
+import { useCallback, useEffect } from "preact/hooks";
+import { useSignal } from "@preact/signals";
 import { Link } from "@mauroandre/velojs";
-import { usePathname } from "@mauroandre/velojs/hooks";
-import type { ActionArgs } from "@mauroandre/velojs";
+import { usePathname, useLoader } from "@mauroandre/velojs/hooks";
+import type { ActionArgs, LoaderArgs } from "@mauroandre/velojs";
 import { darkTheme, lightTheme } from "../styles/theme.css.js";
-import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Sun, Moon } from "../components/icons.js";
+import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Logout, Sun, Moon } from "../components/icons.js";
 import * as css from "./MainLayout.css.js";
 
 import * as Home from "../pages/Home.js";
@@ -93,8 +94,49 @@ export const action_getActiveTimers = async ({}: ActionArgs<{}>) => {
     return { timers };
 };
 
+export const loader = async ({ c }: LoaderArgs) => {
+    const user = c.get("user") as { id: string; email: string; name: string; role: string } | null;
+    return { user, serverTime: new Date().toISOString() };
+};
+
+export const action_logout = async ({ c }: ActionArgs<{}>) => {
+    const { deleteCookie } = await import("@mauroandre/velojs/cookie");
+    deleteCookie(c!, "session", { path: "/" });
+    return { ok: true };
+};
+
 export const Component = ({ children }: { children: preact.ComponentChildren }) => {
     const pathname = usePathname();
+    const { data } = useLoader<{
+        user: { id: string; email: string; name: string; role: string } | null;
+        serverTime: string;
+    }>();
+    const user = data.value?.user;
+    const clock = useSignal("");
+
+    useEffect(() => {
+        if (typeof window === "undefined" || !data.value?.serverTime) return;
+
+        const serverInitialMs = new Date(data.value.serverTime).getTime();
+        const clientInitialMs = Date.now();
+        const delta = serverInitialMs - clientInitialMs;
+
+        const update = () => {
+            const now = new Date(Date.now() + delta);
+            const hours = String(now.getHours()).padStart(2, "0");
+            const minutes = String(now.getMinutes()).padStart(2, "0");
+            clock.value = `${hours}:${minutes}`;
+        };
+
+        update();
+        const interval = setInterval(update, 1000);
+        return () => clearInterval(interval);
+    }, [data.value?.serverTime]);
+
+    const handleLogout = useCallback(async () => {
+        await action_logout({ body: {} });
+        window.location.href = "/login";
+    }, []);
 
     const toggleTheme = useCallback(() => {
         if (typeof window === "undefined") return;
@@ -125,9 +167,21 @@ export const Component = ({ children }: { children: preact.ComponentChildren }) 
                         );
                     })}
                 </nav>
-                <button class={css.themeButton} onClick={toggleTheme}>
-                    <Sun size={20} />
-                </button>
+                {user && (
+                    <div class={css.userInfo}>
+                        <span class={css.userName}>{user.name}</span>
+                        <span class={css.userEmail}>{user.email}</span>
+                        {clock.value && <span class={css.clock}>{clock.value}</span>}
+                    </div>
+                )}
+                <div class={css.actionsRow}>
+                    <button class={css.themeButton} onClick={toggleTheme} title="Toggle theme">
+                        <Sun size={20} />
+                    </button>
+                    <button class={css.themeButton} onClick={handleLogout} title="Logout">
+                        <Logout size={20} />
+                    </button>
+                </div>
             </aside>
             <main class={`${css.mainScroll} ${css.main}`}>{children}</main>
         </div>

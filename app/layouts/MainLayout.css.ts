@@ -111,6 +111,50 @@ export const navLinkActive = style({
     fontWeight: 600,
 });
 
+export const userInfo = style({
+    display: "none",
+    flexDirection: "column",
+    gap: "0.125rem",
+    padding: `${vars.space.sm} ${vars.space.md}`,
+    borderTop: `0.0625rem solid ${vars.color.border}`,
+    "@media": {
+        "(min-width: 48rem)": {
+            display: "flex",
+        },
+    },
+});
+
+export const userName = style({
+    fontSize: vars.fontSize.sm,
+    fontWeight: 600,
+    color: vars.color.text,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+});
+
+export const userEmail = style({
+    fontSize: vars.fontSize.xs,
+    color: vars.color.textMuted,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+});
+
+export const clock = style({
+    fontSize: vars.fontSize.md,
+    fontWeight: 600,
+    color: vars.color.text,
+    marginTop: vars.space.xs,
+    fontVariantNumeric: "tabular-nums",
+});
+
+export const actionsRow = style({
+    display: "flex",
+    alignItems: "center",
+    gap: vars.space.xs,
+});
+
 export const themeButton = style({
     display: "flex",
     alignItems: "center",
