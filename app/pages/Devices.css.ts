@@ -76,6 +76,11 @@ export const deviceMeta = style({
     color: vars.color.textMuted,
 });
 
+export const deviceArea = style({
+    fontSize: vars.fontSize.sm,
+    color: vars.color.textMuted,
+});
+
 export const editButton = style({
     display: "flex",
     alignItems: "center",

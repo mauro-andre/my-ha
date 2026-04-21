@@ -71,6 +71,11 @@ export const cardMeta = style({
     color: vars.color.textMuted,
 });
 
+export const cardArea = style({
+    fontSize: vars.fontSize.sm,
+    color: vars.color.textMuted,
+});
+
 export const editButton = style({
     display: "flex",
     alignItems: "center",

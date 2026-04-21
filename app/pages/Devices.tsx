@@ -10,6 +10,7 @@ interface DeviceItem {
     vendor: string;
     model: string;
     category: string;
+    areaName: string | null;
 }
 
 interface DevicesData {
@@ -18,12 +19,15 @@ interface DevicesData {
 
 export const loader = async ({}: LoaderArgs) => {
     const { getAllDevices } = await import("../modules/devices/device.services.js");
+    const { getAllAreas } = await import("../modules/areas/area.services.js");
+    const areasById = new Map(getAllAreas().map((a) => [a.id, a.name]));
     const devices = getAllDevices().map((d) => ({
         ieeeAddress: d.ieeeAddress,
         friendlyName: d.friendlyName,
         vendor: d.vendor,
         model: d.model,
         category: d.category,
+        areaName: d.areaId ? (areasById.get(d.areaId) ?? null) : null,
     }));
     return { devices } satisfies DevicesData;
 };
@@ -56,6 +60,7 @@ export const Component = () => {
                         <div class={css.deviceInfo}>
                             <span class={css.deviceName}>{device.friendlyName}</span>
                             <span class={css.deviceMeta}>{device.model} · {device.vendor}</span>
+                            <span class={css.deviceArea}>{device.areaName ?? "No area"}</span>
                         </div>
                         <Link to={`/devices/${device.ieeeAddress}`} class={css.editButton}>
                             <Pencil size={18} />

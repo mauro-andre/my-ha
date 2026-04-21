@@ -13,6 +13,7 @@ interface IrDeviceItem {
     name: string;
     commandCount: number;
     blasterCount: number;
+    areaName: string | null;
 }
 
 interface IrDevicesData {
@@ -23,9 +24,11 @@ interface IrDevicesData {
 export const loader = async ({}: LoaderArgs) => {
     const { getAllIrDevices } = await import("../modules/ir-devices/ir-device.services.js");
     const { getAllDevices } = await import("../modules/devices/device.services.js");
+    const { getAllAreas } = await import("../modules/areas/area.services.js");
 
     const irDevices = await getAllIrDevices();
     const allDevices = getAllDevices();
+    const areasById = new Map(getAllAreas().map((a) => [a.id, a.name]));
 
     const blasters = allDevices
         .filter((d) => d.capabilities.some((c) =>
@@ -39,6 +42,7 @@ export const loader = async ({}: LoaderArgs) => {
             name: d.name,
             commandCount: d.commands.length,
             blasterCount: d.blasters.length,
+            areaName: d.areaId ? (areasById.get(d.areaId) ?? null) : null,
         })),
         blasters,
     } satisfies IrDevicesData;
@@ -117,6 +121,7 @@ export const Component = () => {
                                 <div class={css.cardMeta}>
                                     {device.commandCount} commands · {device.blasterCount} blaster{device.blasterCount !== 1 ? "s" : ""}
                                 </div>
+                                <div class={css.cardArea}>{device.areaName ?? "No area"}</div>
                             </div>
                             <Link to={`/ir-devices/${device.id}`} class={css.editButton}>
                                 <Pencil size={18} />
