@@ -2,6 +2,7 @@ import "dotenv/config";
 import { connect } from "@mauroandre/zodmongo";
 import { addRoutes } from "@mauroandre/velojs/server";
 import { loadDevicesFromDb } from "./modules/devices/device.services.js";
+import "./modules/devices/device.stream.js";
 import { connectMqtt } from "./mqtt/client.js";
 
 const mongoUri = process.env["MONGO_URI"] ?? "mongodb://localhost:27017";
@@ -37,24 +38,6 @@ addRoutes((app) => {
     app.use("/assets/*", async (c, next) => {
         const { authMiddleware } = await import("./modules/users/auth.middleware.js");
         return authMiddleware(c, next);
-    });
-
-    // SSE: stream device state changes
-    app.get("/api/devices/events", async (c) => {
-        const { streamSSE } = await import("hono/streaming");
-        const { onStateChange } = await import("./modules/devices/device.services.js");
-
-        return streamSSE(c, async (stream) => {
-            const unsubscribe = onStateChange((ieeeAddress, changedKeys, state) => {
-                stream.writeSSE({
-                    event: "state_change",
-                    data: JSON.stringify({ ieeeAddress, changedKeys, state }),
-                });
-            });
-
-            stream.onAbort(() => { unsubscribe(); });
-            await new Promise<void>(() => {});
-        });
     });
 
     app.get("/assets/devices/:model", async (c) => {

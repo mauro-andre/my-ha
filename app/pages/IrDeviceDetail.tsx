@@ -1,13 +1,14 @@
 import { Link } from "@mauroandre/velojs";
-import { useLoader } from "@mauroandre/velojs/hooks";
+import { useLoader, useEventStream } from "@mauroandre/velojs/hooks";
 import type { LoaderArgs, ActionArgs } from "@mauroandre/velojs";
-import { useCallback, useRef, useEffect } from "preact/hooks";
-import { useSignal } from "@preact/signals";
+import { useCallback, useRef } from "preact/hooks";
+import { useSignal, useSignalEffect } from "@preact/signals";
 import { ArrowLeft, Aerial, Pencil, Plus, X } from "../components/icons.js";
 import { Select } from "../components/Select.js";
 import { getIcon } from "../components/icon-registry.js";
 import { ConfirmModal } from "../components/ConfirmModal.js";
 import { CommandControl } from "../components/controls/CommandControl.js";
+import { deviceStateStream } from "../modules/devices/device.stream.js";
 import * as IrDevices from "./IrDevices.js";
 import * as css from "./IrDeviceDetail.css.js";
 
@@ -218,25 +219,19 @@ export const Component = () => {
         learnedCode.value = null;
     }, []);
 
-    // SSE: listen for learned IR codes
-    useEffect(() => {
-        if (typeof window === "undefined" || !defaultBlaster) return;
+    const { data: deviceEvent } = useEventStream(deviceStateStream, { enabled: !!defaultBlaster });
 
-        const es = new EventSource("/api/devices/events");
-
-        es.addEventListener("state_change", (e) => {
-            const data = JSON.parse(e.data);
-            if (data.ieeeAddress === defaultBlaster && data.changedKeys.includes("learned_ir_code")) {
-                const code = data.state.learned_ir_code;
-                if (code && learning.value) {
-                    learnedCode.value = code;
-                    learning.value = false;
-                }
-            }
-        });
-
-        return () => es.close();
-    }, [defaultBlaster]);
+    useSignalEffect(() => {
+        const change = deviceEvent.value;
+        if (!change || !defaultBlaster) return;
+        if (change.ieeeAddress !== defaultBlaster) return;
+        if (!change.changedKeys.includes("learned_ir_code")) return;
+        const code = change.state["learned_ir_code"];
+        if (code && learning.value) {
+            learnedCode.value = code;
+            learning.value = false;
+        }
+    });
 
     const handleStartLearn = useCallback(async () => {
         learning.value = true;

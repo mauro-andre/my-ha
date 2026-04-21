@@ -1,16 +1,12 @@
-import { useEffect } from "preact/hooks";
+import { useEventStream } from "@mauroandre/velojs/hooks";
+import { useSignalEffect } from "@preact/signals";
+import { deviceStateStream } from "../modules/devices/device.stream.js";
 
 export function useDeviceEvents(onStateChange: (ieeeAddress: string, state: Record<string, any>) => void) {
-    useEffect(() => {
-        if (typeof window === "undefined") return;
+    const { data } = useEventStream(deviceStateStream);
 
-        const es = new EventSource("/api/devices/events");
-
-        es.addEventListener("state_change", (e) => {
-            const data = JSON.parse(e.data);
-            onStateChange(data.ieeeAddress, data.state);
-        });
-
-        return () => es.close();
-    }, []);
+    useSignalEffect(() => {
+        const change = data.value;
+        if (change) onStateChange(change.ieeeAddress, change.state);
+    });
 }
