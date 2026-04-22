@@ -1,5 +1,6 @@
 import { dbSchema, embeddedSchema } from "@mauroandre/zodmongo";
 import { z } from "zod/v4";
+import { actionSchema } from "../actions/action.schemas.js";
 
 // --- Triggers ---
 
@@ -51,25 +52,6 @@ const conditionSchema = z.union([deviceStateConditionSchema, timeRangeConditionS
 export type Condition = z.infer<typeof conditionSchema>;
 export type DeviceStateCondition = z.infer<typeof deviceStateConditionSchema>;
 export type TimeRangeCondition = z.infer<typeof timeRangeConditionSchema>;
-
-// --- Actions ---
-
-const deviceCommandActionSchema = embeddedSchema({
-    type: z.literal("device_command"),
-    ieeeAddress: z.string(),
-    property: z.string(),
-    value: z.any(),
-});
-
-const irCommandActionSchema = embeddedSchema({
-    type: z.literal("ir_command"),
-    blasterIeee: z.string(),
-    code: z.string(),
-});
-
-const actionSchema = z.union([deviceCommandActionSchema, irCommandActionSchema]);
-
-export type Action = z.infer<typeof actionSchema>;
 
 // --- Automation ---
 

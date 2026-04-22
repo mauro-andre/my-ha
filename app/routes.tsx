@@ -12,6 +12,8 @@ import * as LinkedControls from "./pages/LinkedControls.js";
 import * as Areas from "./pages/Areas.js";
 import * as Automations from "./pages/Automations.js";
 import * as AutomationEdit from "./pages/AutomationEdit.js";
+import * as Scenes from "./pages/Scenes.js";
+import * as SceneEdit from "./pages/SceneEdit.js";
 import { authMiddleware } from "./modules/users/auth.middleware.js";
 
 export default [
@@ -33,6 +35,8 @@ export default [
                     { path: "/areas", module: Areas },
                     { path: "/automations", module: Automations },
                     { path: "/automations/:id", module: AutomationEdit },
+                    { path: "/scenes", module: Scenes },
+                    { path: "/scenes/:id", module: SceneEdit },
                 ],
             },
         ],

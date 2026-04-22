@@ -72,6 +72,19 @@ export const controlsGrid = style({
     gap: vars.space.sm,
 });
 
+export const scenesRow = style({
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 12rem), 1fr))",
+    gap: vars.space.sm,
+    marginBottom: vars.space.lg,
+});
+
+export const globalScenes = style({
+    marginBottom: vars.space.xxl,
+    paddingBottom: vars.space.lg,
+    borderBottom: `0.0625rem solid ${vars.color.borderMuted}`,
+});
+
 export const emptyState = style({
     textAlign: "center",
     padding: vars.space.xxl,

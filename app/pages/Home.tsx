@@ -6,6 +6,7 @@ import { CommandControl } from "../components/controls/CommandControl.js";
 import { QuickTimer } from "../components/QuickTimer.js";
 import { useDeviceEvents } from "../hooks/useDeviceEvents.js";
 import { getIcon } from "../components/icon-registry.js";
+import { Play } from "../components/icons.js";
 import type { GenericCapability } from "../modules/devices/device.schemas.js";
 import * as css from "./Home.css.js";
 
@@ -43,15 +44,23 @@ interface IrDeviceData {
     commands: Array<{ name: string; code: string; blasterIeee: string }>;
 }
 
+interface SceneData {
+    id: string;
+    name: string;
+    icon: string | null;
+}
+
 interface AreaData {
     id: string;
     name: string;
     icon: string | null;
     devices: DeviceData[];
     irDevices: IrDeviceData[];
+    scenes: SceneData[];
 }
 
 interface DashboardData {
+    globalScenes: SceneData[];
     areas: AreaData[];
     unassigned: AreaData | null;
 }
@@ -60,10 +69,26 @@ export const loader = async ({}: LoaderArgs) => {
     const { getAllDevices } = await import("../modules/devices/device.services.js");
     const { getAllAreas } = await import("../modules/areas/area.services.js");
     const { getAllIrDevices } = await import("../modules/ir-devices/ir-device.services.js");
+    const { getAllScenes } = await import("../modules/scenes/scene.services.js");
 
     const allAreas = getAllAreas();
     const allDevices = getAllDevices();
     const allIrDevices = await getAllIrDevices();
+    const allScenes = await getAllScenes();
+
+    const scenesByArea = new Map<string, SceneData[]>();
+    const globalScenes: SceneData[] = [];
+    for (const s of allScenes) {
+        const sceneData: SceneData = { id: s.id!, name: s.name, icon: s.icon ?? null };
+        const areaId = s.area?.id;
+        if (areaId) {
+            const list = scenesByArea.get(areaId) ?? [];
+            list.push(sceneData);
+            scenesByArea.set(areaId, list);
+        } else {
+            globalScenes.push(sceneData);
+        }
+    }
 
     const areas: AreaData[] = allAreas.map((area) => ({
         id: area.id!,
@@ -86,7 +111,8 @@ export const loader = async ({}: LoaderArgs) => {
                 name: d.name,
                 commands: d.commands,
             })),
-    })).filter((a) => a.devices.length > 0 || a.irDevices.length > 0);
+        scenes: scenesByArea.get(area.id!) ?? [],
+    })).filter((a) => a.devices.length > 0 || a.irDevices.length > 0 || a.scenes.length > 0);
 
     const unassignedDevices = allDevices
         .filter((d) => !d.areaId)
@@ -109,10 +135,10 @@ export const loader = async ({}: LoaderArgs) => {
 
     const unassigned: AreaData | null =
         (unassignedDevices.length > 0 || unassignedIrDevices.length > 0)
-            ? { id: "__unassigned", name: "Unassigned", icon: null, devices: unassignedDevices, irDevices: unassignedIrDevices }
+            ? { id: "__unassigned", name: "Unassigned", icon: null, devices: unassignedDevices, irDevices: unassignedIrDevices, scenes: [] }
             : null;
 
-    return { areas, unassigned } satisfies DashboardData;
+    return { globalScenes, areas, unassigned } satisfies DashboardData;
 };
 
 export const action_command = async ({ body }: ActionArgs<{ ieee: string; property: string; value: unknown }>) => {
@@ -124,6 +150,12 @@ export const action_command = async ({ body }: ActionArgs<{ ieee: string; proper
 export const action_irSend = async ({ body }: ActionArgs<{ blasterIeee: string; code: string }>) => {
     const { sendIrCode } = await import("../modules/ir-devices/ir-device.services.js");
     sendIrCode(body.blasterIeee, body.code);
+    return { ok: true };
+};
+
+export const action_runScene = async ({ body }: ActionArgs<{ id: string }>) => {
+    const { runScene } = await import("../modules/scenes/scene.services.js");
+    await runScene(body.id);
     return { ok: true };
 };
 
@@ -158,7 +190,7 @@ export const Component = () => {
 
     if (!data.value) return null;
 
-    const { areas, unassigned } = data.value;
+    const { globalScenes, areas, unassigned } = data.value;
 
     const handleCommand = useCallback(async (ieee: string, property: string, value: unknown) => {
         await action_command({ body: { ieee, property, value } });
@@ -168,7 +200,23 @@ export const Component = () => {
         await action_irSend({ body: { blasterIeee, code } });
     }, []);
 
-    if (areas.length === 0 && !unassigned) {
+    const handleRunScene = useCallback(async (id: string) => {
+        await action_runScene({ body: { id } });
+    }, []);
+
+    const renderScene = (scene: SceneData) => {
+        const Icon = scene.icon ? getIcon(scene.icon) ?? Play : Play;
+        return (
+            <CommandControl
+                key={scene.id}
+                label={scene.name}
+                Icon={Icon}
+                onFire={() => handleRunScene(scene.id)}
+            />
+        );
+    };
+
+    if (globalScenes.length === 0 && areas.length === 0 && !unassigned) {
         return (
             <div>
                 <h1 class={css.pageTitle}>Dashboard</h1>
@@ -192,6 +240,12 @@ export const Component = () => {
                     )}
                     <span class={css.areaName}>{area.name}</span>
                 </div>
+
+                {area.scenes.length > 0 && (
+                    <div class={css.scenesRow}>
+                        {area.scenes.map(renderScene)}
+                    </div>
+                )}
 
                 {area.devices.map((device) => {
                     const settable = getSettableCapabilities(device.capabilities);
@@ -264,6 +318,13 @@ export const Component = () => {
     return (
         <div>
             <h1 class={css.pageTitle}>Dashboard</h1>
+            {globalScenes.length > 0 && (
+                <div class={css.globalScenes}>
+                    <div class={css.scenesRow}>
+                        {globalScenes.map(renderScene)}
+                    </div>
+                </div>
+            )}
             {areas.map(renderArea)}
             {unassigned && renderArea(unassigned)}
         </div>

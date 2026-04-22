@@ -1,9 +1,9 @@
 import { automationSchema } from "./automation.schemas.js";
-import type { Automation, Trigger, Condition, Action } from "./automation.schemas.js";
+import type { Automation, Trigger, Condition } from "./automation.schemas.js";
+import type { Action } from "../actions/action.schemas.js";
 import * as repo from "./automation.repository.js";
 import { getDeviceByIeee, onStateChange } from "../devices/device.services.js";
-import { publish } from "../../mqtt/client.js";
-import { sendIrCode } from "../ir-devices/ir-device.services.js";
+import { runActions } from "../actions/action.services.js";
 
 // --- In-memory state ---
 
@@ -98,21 +98,10 @@ export async function toggleAutomation(id: string) {
 
 // --- Execution ---
 
-function executeActions(automation: Automation) {
+function runAutomation(automation: Automation) {
     console.log(`[automations] Executing "${automation.name}"`);
 
-    for (const action of automation.actions) {
-        if (action.type === "device_command") {
-            const device = getDeviceByIeee(action.ieeeAddress);
-            if (device) {
-                publish(`zigbee2mqtt/${device.friendlyName}/set`, {
-                    [action.property]: action.value,
-                });
-            }
-        } else if (action.type === "ir_command") {
-            sendIrCode(action.blasterIeee, action.code);
-        }
-    }
+    runActions(automation.actions);
 
     automation.lastTriggeredAt = new Date();
     automation.triggerCount += 1;
@@ -194,7 +183,7 @@ function restoreTimer(automation: Automation) {
             return;
         }
 
-        executeActions(automation);
+        runAutomation(automation);
     }, remaining);
 
     activeTimers.set(automation.id!, timeout);
@@ -254,7 +243,7 @@ function scheduleNextRun(automation: Automation) {
         if (automation.conditions.length > 0 && !evaluateConditions(automation.conditions)) {
             console.log(`[automations] "${automation.name}" conditions not met, skipping`);
         } else {
-            executeActions(automation);
+            runAutomation(automation);
         }
 
         // Schedule next run (unless one-shot that got disabled)
@@ -301,7 +290,7 @@ function handleDeviceStateChange(ieeeAddress: string, changedKeys: string[], sta
             continue;
         }
 
-        executeActions(automation);
+        runAutomation(automation);
     }
 }
 

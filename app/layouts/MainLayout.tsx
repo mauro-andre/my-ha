@@ -4,7 +4,7 @@ import { Link } from "@mauroandre/velojs";
 import { usePathname, useLoader } from "@mauroandre/velojs/hooks";
 import type { ActionArgs, LoaderArgs } from "@mauroandre/velojs";
 import { darkTheme, lightTheme } from "../styles/theme.css.js";
-import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Logout, Sun, Moon } from "../components/icons.js";
+import { Home as HomeIcon, Chip, Aerial, Link as LinkIcon, Grid, Refresh, Play, Logout, Sun, Moon } from "../components/icons.js";
 import * as css from "./MainLayout.css.js";
 
 import * as Home from "../pages/Home.js";
@@ -13,6 +13,7 @@ import * as IrDevices from "../pages/IrDevices.js";
 import * as LinkedControls from "../pages/LinkedControls.js";
 import * as Areas from "../pages/Areas.js";
 import * as Automations from "../pages/Automations.js";
+import * as Scenes from "../pages/Scenes.js";
 
 const navItems = [
     { module: Home, path: "/", label: "Home", Icon: HomeIcon },
@@ -20,6 +21,7 @@ const navItems = [
     { module: IrDevices, path: "/ir-devices", label: "Remotes", Icon: Aerial },
     { module: LinkedControls, path: "/linked", label: "Linked", Icon: LinkIcon },
     { module: Areas, path: "/areas", label: "Areas", Icon: Grid },
+    { module: Scenes, path: "/scenes", label: "Scenes", Icon: Play },
     { module: Automations, path: "/automations", label: "Auto", Icon: Refresh },
 ];
 

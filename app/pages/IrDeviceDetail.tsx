@@ -9,6 +9,7 @@ import { getIcon } from "../components/icon-registry.js";
 import { ConfirmModal } from "../components/ConfirmModal.js";
 import { CommandControl } from "../components/controls/CommandControl.js";
 import { deviceStateStream } from "../modules/devices/device.stream.js";
+import type { DeviceStateChange } from "../modules/devices/device.stream.js";
 import * as IrDevices from "./IrDevices.js";
 import * as css from "./IrDeviceDetail.css.js";
 
@@ -220,10 +221,12 @@ export const Component = () => {
     }, []);
 
     const { data: deviceEvent } = useEventStream(deviceStateStream, { enabled: !!defaultBlaster });
+    const lastProcessed = useRef<DeviceStateChange | null>(null);
 
     useSignalEffect(() => {
         const change = deviceEvent.value;
-        if (!change || !defaultBlaster) return;
+        if (!change || change === lastProcessed.current || !defaultBlaster) return;
+        lastProcessed.current = change;
         if (change.ieeeAddress !== defaultBlaster) return;
         if (!change.changedKeys.includes("learned_ir_code")) return;
         const code = change.state["learned_ir_code"];

@@ -2,7 +2,7 @@ import { signal, useSignal } from "@preact/signals";
 import { useCallback, useEffect } from "preact/hooks";
 import { Select } from "./Select.js";
 import { action_createQuickTimer, action_cancelQuickTimer, action_getActiveTimers } from "../layouts/MainLayout.js";
-import type { Action } from "../modules/automations/automation.schemas.js";
+import type { Action } from "../modules/actions/action.schemas.js";
 import * as css from "./QuickTimer.css.js";
 
 interface QuickTimerProps {

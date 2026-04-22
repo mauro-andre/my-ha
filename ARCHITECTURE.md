@@ -92,8 +92,9 @@ useSignalEffect(() => { if (data.value) refetch(); });
 ## Rules
 
 - **Pages have no business logic.** The `action_xxx` and `loader` exports in TSX files only delegate to modules.
-- **No database access without zodMongo.** All MongoDB access goes through the repository, which uses zodMongo with Zod validation.
+- **Schemas are always built with zodmongo.** Use `dbSchema` for collections and `embeddedSchema` for value objects. Cross-collection references **must** use `relation(otherSchema, { collection })` so `getPipeline` generates the `$lookup` and the field is auto-populated on read. Never store a raw `sceneId`/`areaId`/etc. string when you could store a `relation` — the only exception is when the reference lives inside a `z.union(...)` variant (zodmongo's walker does not descend into unions), in which case populate manually in the service.
 - **Schemas are the source of truth.** TypeScript types are inferred from Zod schemas. Validation happens at entry (actions) and exit (repository).
+- **Repositories use only zodmongo methods.** Always use `save`, `findMany`, `deleteMany`, `getPipeline`, `toSave` from `@mauroandre/zodmongo`. Never use the native MongoDB driver directly, and never reach for `getDb()` unless there is a justified reason (e.g. a feature zodmongo doesn't cover — bulk ops, transactions, change streams). When `getDb()` is used, the call **must** be preceded by a `// WHY:` comment explaining the specific reason.
 - **Services contain business logic.** Actions and the MQTT router are entry points that call services. Services call repositories.
 - **Modules are independent.** Each module has its own schemas, repository, services, and actions. Cross-module communication happens via services, never through direct repository access.
 - **No manual SSE.** Real-time server → client updates always go through velojs event streams (`createEventStream` + `useEventStream`). Never register SSE routes by hand with `streamSSE`, and never open a raw `EventSource` on the client.
