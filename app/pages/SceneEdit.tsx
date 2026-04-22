@@ -144,7 +144,7 @@ export const Component = () => {
     const handleSave = useCallback(async () => {
         if (!name.value.trim()) return;
 
-        const result = await action_save({
+        await action_save({
             body: {
                 id: scene?.id,
                 name: name.value.trim(),
@@ -154,11 +154,7 @@ export const Component = () => {
             },
         });
 
-        if (scene?.id) {
-            navigate("/scenes");
-        } else if (result && typeof result === "object" && "id" in result && result.id) {
-            navigate(`/scenes/${result.id}`);
-        }
+        navigate("/scenes");
     }, [scene]);
 
     const handleRun = useCallback(async () => {

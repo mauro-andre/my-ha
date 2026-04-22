@@ -114,3 +114,17 @@ export const emptyState = style({
     color: vars.color.textMuted,
     fontSize: vars.fontSize.md,
 });
+
+export const badgeOrphan = style({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: vars.fontSize.xs,
+    padding: `0.125rem ${vars.space.sm}`,
+    borderRadius: vars.radius.sm,
+    backgroundColor: vars.color.danger,
+    color: vars.color.primaryText,
+    fontWeight: 600,
+    marginLeft: vars.space.sm,
+    verticalAlign: "middle",
+});

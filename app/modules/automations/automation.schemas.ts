@@ -1,6 +1,7 @@
-import { dbSchema, embeddedSchema } from "@mauroandre/zodmongo";
+import { dbSchema, embeddedSchema, relation } from "@mauroandre/zodmongo";
 import { z } from "zod/v4";
 import { actionSchema } from "../actions/action.schemas.js";
+import { sceneSchema } from "../scenes/scene.schemas.js";
 
 // --- Triggers ---
 
@@ -62,6 +63,7 @@ export const automationSchema = dbSchema({
     trigger: triggerSchema,
     conditions: z.array(conditionSchema),
     actions: z.array(actionSchema),
+    scenes: z.array(relation(sceneSchema, { collection: "scenes" })),
     lastTriggeredAt: z.date().nullable().optional(),
     triggerCount: z.number(),
 });

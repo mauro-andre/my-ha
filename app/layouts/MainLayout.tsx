@@ -32,7 +32,8 @@ export const action_createQuickTimer = async ({ body }: ActionArgs<{
     mode: "timer" | "schedule";
     timerSeconds?: number;
     scheduleTime?: string;
-    action: any;
+    action?: any;
+    sceneId?: string;
 }>) => {
     const { createAutomation } = await import("../modules/automations/automation.services.js");
 
@@ -45,7 +46,8 @@ export const action_createQuickTimer = async ({ body }: ActionArgs<{
         runOnce: true,
         trigger,
         conditions: [],
-        actions: [body.action],
+        actions: body.action ? [body.action] : [],
+        sceneIds: body.sceneId ? [body.sceneId] : [],
     });
 
     let executeAt: string;
@@ -74,6 +76,10 @@ export const action_getActiveTimers = async ({}: ActionArgs<{}>) => {
         if (!auto.enabled || !auto.runOnce) continue;
         if (auto.trigger.type !== "timer" && auto.trigger.type !== "schedule") continue;
 
+        const executeAt = auto.trigger.type === "timer"
+            ? auto.trigger.executeAt.toISOString()
+            : getNextScheduleDate(auto.trigger.time, auto.trigger.days).toISOString();
+
         for (const action of auto.actions) {
             let actionKey = "";
             let value = "";
@@ -84,12 +90,16 @@ export const action_getActiveTimers = async ({}: ActionArgs<{}>) => {
                 actionKey = `ir:${action.blasterIeee}:${action.code}`;
                 value = "IR";
             }
+            if (actionKey) timers.push({ id: auto.id!, actionKey, value, executeAt });
+        }
 
-            const executeAt = auto.trigger.type === "timer"
-                ? auto.trigger.executeAt.toISOString()
-                : getNextScheduleDate(auto.trigger.time, auto.trigger.days).toISOString();
-
-            timers.push({ id: auto.id!, actionKey, value, executeAt });
+        for (const scene of auto.scenes) {
+            timers.push({
+                id: auto.id!,
+                actionKey: `scene:${scene.id}`,
+                value: "Run",
+                executeAt,
+            });
         }
     }
 

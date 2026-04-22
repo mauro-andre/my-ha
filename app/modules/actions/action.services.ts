@@ -6,7 +6,11 @@ import { publish } from "../../mqtt/client.js";
 // Spacing between actions prevents Zigbee radio congestion when running
 // scenes/automations that fan out to many devices. Without it, commands
 // to devices at the edge of range are frequently dropped.
-const ACTION_SPACING_MS = 500;
+// Tune via ACTION_SPACING_MS env var; default is 500ms.
+const ACTION_SPACING_MS = (() => {
+    const raw = Number(process.env["ACTION_SPACING_MS"]);
+    return Number.isFinite(raw) && raw >= 0 ? raw : 500;
+})();
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

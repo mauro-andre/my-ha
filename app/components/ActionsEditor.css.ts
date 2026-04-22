@@ -46,11 +46,29 @@ export const editingLabel = style({
     marginBottom: vars.space.xs,
 });
 
+export const addForm = style({
+    marginTop: vars.space.lg,
+    padding: vars.space.md,
+    border: `0.0625rem dashed ${vars.color.border}`,
+    borderRadius: vars.radius.md,
+    backgroundColor: vars.color.bg,
+    display: "flex",
+    flexDirection: "column",
+    gap: vars.space.sm,
+});
+
+export const addFormTitle = style({
+    fontSize: vars.fontSize.xs,
+    color: vars.color.textMuted,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+});
+
 export const inputGroup = style({
     display: "flex",
     flexDirection: "column",
     gap: vars.space.xs,
-    marginBottom: vars.space.md,
 });
 
 export const row = style({

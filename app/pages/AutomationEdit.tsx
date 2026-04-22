@@ -7,6 +7,8 @@ import { ArrowLeft, Plus, X } from "../components/icons.js";
 import { Select } from "../components/Select.js";
 import { ActionsEditor } from "../components/ActionsEditor.js";
 import type { DeviceOption, IrDeviceOption } from "../components/ActionsEditor.js";
+import { SceneRefsEditor } from "../components/SceneRefsEditor.js";
+import type { SceneOption } from "../components/SceneRefsEditor.js";
 import type { Trigger, Condition } from "../modules/automations/automation.schemas.js";
 import type { Action } from "../modules/actions/action.schemas.js";
 import * as Automations from "./Automations.js";
@@ -20,9 +22,11 @@ interface AutomationEditData {
         trigger: Trigger;
         conditions: Condition[];
         actions: Action[];
+        sceneIds: string[];
     } | null;
     devices: DeviceOption[];
     irDevices: IrDeviceOption[];
+    scenes: SceneOption[];
 }
 
 export const loader = async ({ c }: LoaderArgs) => {
@@ -61,6 +65,10 @@ export const loader = async ({ c }: LoaderArgs) => {
             })),
         }));
 
+    const { getAllScenes } = await import("../modules/scenes/scene.services.js");
+    const allScenes = await getAllScenes();
+    const scenes: SceneOption[] = allScenes.map((s) => ({ id: s.id!, name: s.name, icon: s.icon ?? null }));
+
     let automation: AutomationEditData["automation"] = null;
     if (id && id !== "new") {
         const { getAutomation } = await import("../modules/automations/automation.services.js");
@@ -73,11 +81,12 @@ export const loader = async ({ c }: LoaderArgs) => {
                 trigger: auto.trigger,
                 conditions: auto.conditions,
                 actions: auto.actions,
+                sceneIds: auto.scenes.map((s: any) => s.id),
             };
         }
     }
 
-    return { automation, devices, irDevices } satisfies AutomationEditData;
+    return { automation, devices, irDevices, scenes } satisfies AutomationEditData;
 };
 
 export const action_save = async ({ body }: ActionArgs<{
@@ -87,9 +96,11 @@ export const action_save = async ({ body }: ActionArgs<{
     trigger: Trigger;
     conditions: Condition[];
     actions: Action[];
+    sceneIds: string[];
 }>) => {
     if (body.id) {
         const { getAutomation, updateAutomation } = await import("../modules/automations/automation.services.js");
+        const { getScene } = await import("../modules/scenes/scene.services.js");
         const auto = await getAutomation(body.id);
         if (!auto) return { error: "Not found" };
         auto.name = body.name;
@@ -97,6 +108,11 @@ export const action_save = async ({ body }: ActionArgs<{
         auto.trigger = body.trigger;
         auto.conditions = body.conditions;
         auto.actions = body.actions;
+        auto.scenes = [];
+        for (const sid of body.sceneIds) {
+            const s = await getScene(sid);
+            if (s) auto.scenes.push(s);
+        }
         await updateAutomation(auto);
         return { ok: true };
     } else {
@@ -107,6 +123,7 @@ export const action_save = async ({ body }: ActionArgs<{
             trigger: body.trigger,
             conditions: body.conditions,
             actions: body.actions,
+            sceneIds: body.sceneIds,
         });
         return { ok: true };
     }
@@ -151,7 +168,7 @@ export const Component = () => {
 
     if (!data.value) return null;
 
-    const { automation, devices, irDevices } = data.value;
+    const { automation, devices, irDevices, scenes } = data.value;
 
     const name = useSignal(automation?.name ?? "");
     const runOnce = useSignal(automation?.runOnce ?? false);
@@ -171,6 +188,9 @@ export const Component = () => {
 
     // Actions
     const actions = useSignal<Action[]>(automation?.actions ?? []);
+
+    // Scene references
+    const sceneIds = useSignal<string[]>(automation?.sceneIds ?? []);
 
     // Add condition signals
     const addCondType = useSignal("device_state");
@@ -274,6 +294,7 @@ export const Component = () => {
                 trigger,
                 conditions: conditions.value,
                 actions: actions.value,
+                sceneIds: sceneIds.value,
             },
         });
 
@@ -555,6 +576,12 @@ export const Component = () => {
             <div class={css.section}>
                 <h2 class={css.sectionTitle}>Then</h2>
                 <ActionsEditor actions={actions} devices={devices} irDevices={irDevices} />
+                {scenes.length > 0 && (
+                    <>
+                        <h3 class={css.subsectionTitle}>And run scenes</h3>
+                        <SceneRefsEditor sceneIds={sceneIds} scenes={scenes} />
+                    </>
+                )}
             </div>
 
             {/* Save */}

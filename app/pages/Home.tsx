@@ -206,12 +206,22 @@ export const Component = () => {
 
     const renderScene = (scene: SceneData) => {
         const Icon = scene.icon ? getIcon(scene.icon) ?? Play : Play;
+        const timerKey = `scene:${scene.id}`;
         return (
             <CommandControl
                 key={scene.id}
                 label={scene.name}
                 Icon={Icon}
                 onFire={() => handleRunScene(scene.id)}
+                timerKey={timerKey}
+                modalExtra={
+                    <QuickTimer
+                        actionKey={timerKey}
+                        valueOptions={[{ value: "Run", label: "Run" }]}
+                        sceneId={scene.id}
+                        label={scene.name}
+                    />
+                }
             />
         );
     };

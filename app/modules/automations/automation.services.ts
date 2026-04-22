@@ -1,6 +1,7 @@
 import { automationSchema } from "./automation.schemas.js";
 import type { Automation, Trigger, Condition } from "./automation.schemas.js";
 import type { Action } from "../actions/action.schemas.js";
+import type { Scene } from "../scenes/scene.schemas.js";
 import * as repo from "./automation.repository.js";
 import { getDeviceByIeee, onStateChange } from "../devices/device.services.js";
 import { runActions } from "../actions/action.services.js";
@@ -24,11 +25,14 @@ export async function createAutomation(data: {
     trigger: Trigger;
     conditions: Condition[];
     actions: Action[];
+    sceneIds?: string[];
     runOnce: boolean;
 }) {
     const trigger = data.trigger.type === "timer"
         ? { ...data.trigger, executeAt: new Date(Date.now() + data.trigger.seconds * 1000) }
         : data.trigger;
+
+    const scenes = await resolveScenes(data.sceneIds ?? []);
 
     const automation = automationSchema.parse({
         id: null,
@@ -40,20 +44,35 @@ export async function createAutomation(data: {
         trigger,
         conditions: data.conditions,
         actions: data.actions,
+        scenes,
         lastTriggeredAt: null,
         triggerCount: 0,
     });
 
     await repo.saveAutomation(automation);
-    automationsCache.push(automation);
+    const fresh = await repo.findAutomationById(automation.id!);
+    if (fresh) automationsCache.push(fresh);
 
-    if (automation.trigger.type === "timer") {
-        restoreTimer(automation);
-    } else if (automation.trigger.type === "schedule") {
-        scheduleNextRun(automation);
+    const cached = automationsCache[automationsCache.length - 1]!;
+
+    if (cached.trigger.type === "timer") {
+        restoreTimer(cached);
+    } else if (cached.trigger.type === "schedule") {
+        scheduleNextRun(cached);
     }
 
-    return automation;
+    return cached;
+}
+
+async function resolveScenes(sceneIds: string[]): Promise<Scene[]> {
+    if (sceneIds.length === 0) return [];
+    const { getScene } = await import("../scenes/scene.services.js");
+    const scenes: Scene[] = [];
+    for (const id of sceneIds) {
+        const s = await getScene(id);
+        if (s) scenes.push(s);
+    }
+    return scenes;
 }
 
 export function getAllAutomations() {
@@ -66,9 +85,13 @@ export async function getAutomation(id: string) {
 
 export async function updateAutomation(automation: Automation) {
     await repo.saveAutomation(automation);
+    const fresh = await repo.findAutomationById(automation.id!);
+    if (!fresh) return;
     const index = automationsCache.findIndex((a) => a.id === automation.id);
     if (index >= 0) {
-        automationsCache[index] = automation;
+        automationsCache[index] = fresh;
+    } else {
+        automationsCache.push(fresh);
     }
 }
 
@@ -83,34 +106,40 @@ export async function toggleAutomation(id: string) {
     if (!automation) return null;
 
     automation.enabled = !automation.enabled;
-    await repo.saveAutomation(automation);
+    await updateAutomation(automation);
 
-    if (!automation.enabled) {
+    const fresh = automationsCache.find((a) => a.id === id)!;
+    if (!fresh.enabled) {
         clearTimer(id);
-    } else if (automation.trigger.type === "timer") {
-        restoreTimer(automation);
-    } else if (automation.trigger.type === "schedule") {
-        scheduleNextRun(automation);
+    } else if (fresh.trigger.type === "timer") {
+        restoreTimer(fresh);
+    } else if (fresh.trigger.type === "schedule") {
+        scheduleNextRun(fresh);
     }
 
-    return automation;
+    return fresh;
 }
 
 // --- Execution ---
 
-function runAutomation(automation: Automation) {
+async function runAutomation(automation: Automation) {
     console.log(`[automations] Executing "${automation.name}"`);
 
-    runActions(automation.actions);
+    // Primitive actions first, then each scene's actions — one flat queue sharing the stagger.
+    const queue: Action[] = [...automation.actions];
+    for (const scene of automation.scenes) {
+        queue.push(...scene.actions);
+    }
+    runActions(queue);
 
     automation.lastTriggeredAt = new Date();
     automation.triggerCount += 1;
-    repo.saveAutomation(automation);
+    await updateAutomation(automation);
 
     if (automation.runOnce) {
         automation.enabled = false;
         clearTimer(automation.id!);
-        repo.saveAutomation(automation);
+        await updateAutomation(automation);
         console.log(`[automations] "${automation.name}" disabled (one-shot)`);
     }
 }

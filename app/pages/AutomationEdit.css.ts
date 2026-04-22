@@ -29,6 +29,14 @@ export const sectionTitle = style({
     marginBottom: vars.space.md,
 });
 
+export const subsectionTitle = style({
+    fontSize: vars.fontSize.md,
+    fontWeight: 600,
+    color: vars.color.textMuted,
+    marginTop: vars.space.md,
+    marginBottom: vars.space.sm,
+});
+
 export const inputGroup = style({
     display: "flex",
     flexDirection: "column",

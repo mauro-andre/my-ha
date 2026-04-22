@@ -57,7 +57,7 @@ export const loader = async ({}: LoaderArgs) => {
                 : a.trigger.type === "schedule"
                     ? getNextScheduleDate(a.trigger.time, a.trigger.days).toISOString()
                     : null,
-            actionCount: a.actions.length,
+            actionCount: a.actions.length + a.scenes.length,
             lastTriggeredAt: a.lastTriggeredAt ? new Date(a.lastTriggeredAt).toLocaleString() : null,
             triggerCount: a.triggerCount,
         })),

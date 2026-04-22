@@ -60,5 +60,5 @@ export async function runScene(id: string) {
         return;
     }
     console.log(`[scenes] Running "${scene.name}"`);
-    runActions(scene.actions);
+    await runActions(scene.actions);
 }

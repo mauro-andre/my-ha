@@ -8,7 +8,8 @@ import * as css from "./QuickTimer.css.js";
 interface QuickTimerProps {
     actionKey: string;
     valueOptions: Array<{ value: string; label: string }>;
-    buildAction: (value: string) => Action;
+    buildAction?: (value: string) => Action;
+    sceneId?: string;
     label: string;
 }
 
@@ -88,7 +89,7 @@ function CountdownDisplay({ executeAt }: { executeAt: string }) {
 
 // --- QuickTimer (inside modal) ---
 
-export function QuickTimer({ actionKey, valueOptions, buildAction, label }: QuickTimerProps) {
+export function QuickTimer({ actionKey, valueOptions, buildAction, sceneId, label }: QuickTimerProps) {
     const expanded = useSignal(false);
     const selectedValue = useSignal(valueOptions[0]?.value ?? "");
     const mode = useSignal<"timer" | "schedule">("timer");
@@ -102,7 +103,6 @@ export function QuickTimer({ actionKey, valueOptions, buildAction, label }: Quic
     const activeTimer = timerStore.value[actionKey] ?? null;
 
     const handleSet = useCallback(async () => {
-        const action = buildAction(selectedValue.value);
         const name = `${label} → ${selectedValue.value}`;
 
         const result = await action_createQuickTimer({
@@ -111,7 +111,8 @@ export function QuickTimer({ actionKey, valueOptions, buildAction, label }: Quic
                 mode: mode.value,
                 timerSeconds: mode.value === "timer" ? selectedPreset.value! : undefined,
                 scheduleTime: mode.value === "schedule" ? scheduleTime.value : undefined,
-                action,
+                action: buildAction ? buildAction(selectedValue.value) : undefined,
+                sceneId,
             },
         }) as any;
 
@@ -120,7 +121,7 @@ export function QuickTimer({ actionKey, valueOptions, buildAction, label }: Quic
             setTimer(actionKey, { id: result.id, value: selectedValue.value, executeAt });
             expanded.value = false;
         }
-    }, [actionKey, buildAction, label]);
+    }, [actionKey, buildAction, sceneId, label]);
 
     const handleCancel = useCallback(async () => {
         if (!activeTimer) return;
