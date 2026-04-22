@@ -67,7 +67,7 @@ export const deviceSchema = dbSchema({
     model: z.string(),
     description: z.string(),
     powerSource: z.enum(["mains", "battery", "dc", "unknown"]),
-    type: z.enum(["Router", "EndDevice", "Coordinator"]),
+    type: z.enum(["Router", "EndDevice", "Coordinator", "GreenPower"]).catch("EndDevice"),
     capabilities: z.array(capabilitySchema),
     category: deviceCategoryEnum,
     state: z.record(z.string(), z.any()),

@@ -31,8 +31,14 @@ export async function syncDevices(z2mDevices: any[]) {
     const currentIeees = new Set<string>();
     const devices: Device[] = [];
 
+    const KNOWN_TYPES = new Set(["Router", "EndDevice", "Coordinator", "GreenPower"]);
+
     for (const raw of z2mDevices) {
         if (raw.type === "Coordinator") continue;
+
+        if (!KNOWN_TYPES.has(raw.type)) {
+            console.warn(`[devices] Unknown Z2M device type for ${raw.ieee_address} (${raw.friendly_name}): ${JSON.stringify(raw.type)} — falling back to EndDevice`);
+        }
 
         const ieeeAddress = raw.ieee_address;
         currentIeees.add(ieeeAddress);
