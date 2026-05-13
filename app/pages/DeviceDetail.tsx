@@ -129,6 +129,29 @@ function getSettableCapabilities(capabilities: CapabilityData[]): GenericCapabil
     return result;
 }
 
+function getReadableCapabilities(capabilities: CapabilityData[]): GenericCapability[] {
+    const result: GenericCapability[] = [];
+
+    const collect = (cap: GenericCapability) => {
+        const access = cap.access ?? 0;
+        const readOnly = (access & 1) !== 0 && (access & 2) === 0;
+        if (!readOnly) return;
+        if (cap.category === "diagnostic") return;
+        if (cap.kind !== "numeric" && cap.kind !== "binary") return;
+        result.push(cap);
+    };
+
+    for (const cap of capabilities) {
+        if ("features" in cap && cap.features) {
+            for (const f of cap.features) collect(f);
+        } else if (cap.property) {
+            collect(cap as GenericCapability);
+        }
+    }
+
+    return result;
+}
+
 export const Component = () => {
     const { data, refetch } = useLoader<DeviceData>();
 
@@ -155,6 +178,7 @@ export const Component = () => {
     }
 
     const settable = getSettableCapabilities(device.capabilities);
+    const readable = getReadableCapabilities(device.capabilities);
     const linkquality = device.state["linkquality"];
     const editing = useSignal(false);
     const editingLabel = useSignal<string | null>(null);
@@ -272,6 +296,40 @@ export const Component = () => {
                     <h2 class={css.sectionTitle}>Controls</h2>
                     <div class={css.controlsGrid}>
                         {settable.map((cap) => {
+                            const label = resolveLabel(cap, device.displayLabels);
+                            return (
+                                <div key={cap.property} class={css.controlWrapper}>
+                                    <DeviceControl
+                                        capability={cap}
+                                        label={label}
+                                        value={device.state[cap.property]}
+                                        ieeeAddress={device.ieeeAddress}
+                                        onCommand={handleCommand}
+                                    />
+                                    {editingLabel.value === cap.property ? (
+                                        <input
+                                            ref={labelInputRef}
+                                            class={css.nameInput}
+                                            onKeyDown={handleLabelKeyDown}
+                                            onBlur={() => confirmLabelRename()}
+                                        />
+                                    ) : (
+                                        <button class={css.editNameButton} onClick={() => startEditingLabel(cap.property, label)}>
+                                            <Pencil size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {readable.length > 0 && (
+                <div class={css.section}>
+                    <h2 class={css.sectionTitle}>Sensors</h2>
+                    <div class={css.controlsGrid}>
+                        {readable.map((cap) => {
                             const label = resolveLabel(cap, device.displayLabels);
                             return (
                                 <div key={cap.property} class={css.controlWrapper}>

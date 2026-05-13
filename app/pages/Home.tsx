@@ -175,6 +175,26 @@ function getSettableCapabilities(capabilities: ControlCapability[]): GenericCapa
     return result;
 }
 
+function getReadableCapabilities(capabilities: ControlCapability[]): GenericCapability[] {
+    const result: GenericCapability[] = [];
+    const collect = (cap: GenericCapability | ControlCapability) => {
+        const access = cap.access ?? 0;
+        const readOnly = (access & 1) !== 0 && (access & 2) === 0;
+        if (!readOnly) return;
+        if (cap.category === "diagnostic") return;
+        if (cap.kind !== "numeric" && cap.kind !== "binary") return;
+        result.push(cap as GenericCapability);
+    };
+    for (const cap of capabilities) {
+        if ("features" in cap && cap.features) {
+            for (const f of cap.features) collect(f);
+        } else if (cap.property) {
+            collect(cap);
+        }
+    }
+    return result;
+}
+
 function resolveLabel(cap: GenericCapability, displayLabels: Record<string, string>): string {
     if (displayLabels[cap.property]) return displayLabels[cap.property]!;
     if (cap.endpoint) return `${cap.label} ${cap.endpoint.toUpperCase()}`;
@@ -259,7 +279,9 @@ export const Component = () => {
 
                 {area.devices.map((device) => {
                     const settable = getSettableCapabilities(device.capabilities);
-                    if (settable.length === 0) return null;
+                    const readable = getReadableCapabilities(device.capabilities);
+                    const all = [...settable, ...readable];
+                    if (all.length === 0) return null;
 
                     return (
                         <div key={device.ieeeAddress} class={css.deviceGroup}>
@@ -273,7 +295,7 @@ export const Component = () => {
                                 <span class={css.deviceName}>{device.friendlyName}</span>
                             </div>
                             <div class={css.controlsGrid}>
-                                {settable.map((cap) => (
+                                {all.map((cap) => (
                                     <DeviceControl
                                         key={cap.property}
                                         capability={cap}

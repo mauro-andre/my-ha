@@ -92,6 +92,7 @@ export const controlWrapper = style({
     display: "flex",
     alignItems: "center",
     gap: vars.space.xs,
+    minWidth: 0,
 });
 
 export const section = style({
@@ -106,8 +107,8 @@ export const sectionTitle = style({
 
 export const controlsGrid = style({
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 16rem), 1fr))",
-    gap: vars.space.sm,
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 20rem), 1fr))",
+    gap: vars.space.md,
 });
 
 export const infoGrid = style({

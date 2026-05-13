@@ -1,4 +1,8 @@
 import { BinaryControl } from "./BinaryControl.js";
+import { BinaryReadout } from "./BinaryReadout.js";
+import { NumericControl } from "./NumericControl.js";
+import { NumericReadout } from "./NumericReadout.js";
+import { EnumControl } from "./EnumControl.js";
 import { QuickTimer } from "../QuickTimer.js";
 import type { GenericCapability } from "../../modules/devices/device.schemas.js";
 
@@ -11,7 +15,11 @@ interface DeviceControlProps {
 }
 
 export function DeviceControl({ capability, label, value, ieeeAddress, onCommand }: DeviceControlProps) {
-    if (capability.kind === "binary" && (capability.access & 2)) {
+    const isWritable = (capability.access & 2) !== 0;
+    const isReadable = (capability.access & 1) !== 0;
+
+    // Writable: interactive control
+    if (capability.kind === "binary" && isWritable) {
         const valueOn = String(capability.valueOn ?? "ON");
         const valueOff = String(capability.valueOff ?? "OFF");
 
@@ -46,6 +54,45 @@ export function DeviceControl({ capability, label, value, ieeeAddress, onCommand
         );
     }
 
-    // TODO: NumericControl, EnumControl, GenericControl
+    // Writable numeric: editable input with min/max/step
+    if (capability.kind === "numeric" && isWritable) {
+        return (
+            <NumericControl
+                label={label}
+                property={capability.property}
+                value={value}
+                valueMin={capability.valueMin}
+                valueMax={capability.valueMax}
+                valueStep={capability.valueStep}
+                unit={capability.unit}
+                onCommand={onCommand}
+            />
+        );
+    }
+
+    // Writable enum: dropdown
+    if (capability.kind === "enum" && isWritable && capability.values) {
+        return (
+            <EnumControl
+                label={label}
+                property={capability.property}
+                value={value}
+                values={capability.values}
+                onCommand={onCommand}
+            />
+        );
+    }
+
+    // Read-only: display the value
+    if (!isWritable && isReadable) {
+        if (capability.kind === "numeric") {
+            return <NumericReadout label={label} value={value} unit={capability.unit} />;
+        }
+        if (capability.kind === "binary") {
+            return <BinaryReadout label={label} value={value} valueOn={capability.valueOn ?? true} />;
+        }
+    }
+
+    // TODO: EnumReadout, text, composite
     return null;
 }

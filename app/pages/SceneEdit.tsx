@@ -42,12 +42,12 @@ export const loader = async ({ c }: LoaderArgs) => {
         for (const cap of d.capabilities) {
             if ("features" in cap) {
                 for (const f of cap.features) {
-                    if ((f.access & 2) && !f.category) {
-                        properties.push({ property: f.property, kind: f.kind, label: f.label, endpoint: f.endpoint, valueOn: f.valueOn, valueOff: f.valueOff, values: f.values });
+                    if (f.access && !f.category) {
+                        properties.push({ property: f.property, kind: f.kind, label: f.label, access: f.access, endpoint: f.endpoint, valueOn: f.valueOn, valueOff: f.valueOff, values: f.values });
                     }
                 }
-            } else if ((cap.access & 2) && !cap.category) {
-                properties.push({ property: cap.property, kind: cap.kind, label: cap.label, endpoint: cap.endpoint, valueOn: cap.valueOn, valueOff: cap.valueOff, values: cap.values });
+            } else if (cap.access && !cap.category) {
+                properties.push({ property: cap.property, kind: cap.kind, label: cap.label, access: cap.access, endpoint: cap.endpoint, valueOn: cap.valueOn, valueOff: cap.valueOff, values: cap.values });
             }
         }
         return { ieeeAddress: d.ieeeAddress, friendlyName: d.friendlyName, displayLabels: d.displayLabels ?? {}, properties };

@@ -13,6 +13,7 @@ export interface DeviceOption {
         property: string;
         kind: string;
         label: string;
+        access: number;             // bitmask: 1 = readable, 2 = writable
         endpoint?: string | null;
         valueOn?: unknown;
         valueOff?: unknown;
@@ -65,13 +66,18 @@ export function ActionsEditor({ actions, devices, irDevices }: ActionsEditorProp
     const addActionIrCommand = useSignal("");
     const editingActionIndex = useSignal<number | null>(null);
 
+    // ActionsEditor only deals with writable properties (access & 2).
     const getDeviceProps = (ieee: string) => {
-        return devices.find((d) => d.ieeeAddress === ieee)?.properties ?? [];
+        return (devices.find((d) => d.ieeeAddress === ieee)?.properties ?? [])
+            .filter((p) => (p.access & 2) !== 0);
     };
 
     const getDeviceName = (ieee: string) => {
         return devices.find((d) => d.ieeeAddress === ieee)?.friendlyName ?? ieee;
     };
+
+    // Filter device dropdown to only devices that have at least one writable property.
+    const writableDevices = devices.filter((d) => d.properties.some((p) => (p.access & 2) !== 0));
 
     const buildAction = (): Action | null => {
         if (addActionType.value === "device_command") {
@@ -196,7 +202,7 @@ export function ActionsEditor({ actions, devices, irDevices }: ActionsEditorProp
                     <div class={css.row}>
                         <div class={css.fieldSmall}>
                             <Select
-                                options={[{ value: "", label: "Device..." }, ...devices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
+                                options={[{ value: "", label: "Device..." }, ...writableDevices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
                                 value={addActionDevice.value}
                                 onChange={(v) => { addActionDevice.value = v; addActionProperty.value = ""; }}
                                 size="small"

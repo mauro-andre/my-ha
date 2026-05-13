@@ -42,12 +42,12 @@ export const loader = async ({ c }: LoaderArgs) => {
         for (const cap of d.capabilities) {
             if ("features" in cap) {
                 for (const f of cap.features) {
-                    if ((f.access & 2) && !f.category) {
-                        properties.push({ property: f.property, kind: f.kind, label: f.label, endpoint: f.endpoint, valueOn: f.valueOn, valueOff: f.valueOff, values: f.values });
+                    if (f.access && !f.category) {
+                        properties.push({ property: f.property, kind: f.kind, label: f.label, access: f.access, endpoint: f.endpoint, valueOn: f.valueOn, valueOff: f.valueOff, values: f.values });
                     }
                 }
-            } else if ((cap.access & 2) && !cap.category) {
-                properties.push({ property: cap.property, kind: cap.kind, label: cap.label, endpoint: cap.endpoint, valueOn: cap.valueOn, valueOff: cap.valueOff, values: cap.values });
+            } else if (cap.access && !cap.category) {
+                properties.push({ property: cap.property, kind: cap.kind, label: cap.label, access: cap.access, endpoint: cap.endpoint, valueOn: cap.valueOn, valueOff: cap.valueOff, values: cap.values });
             }
         }
         return { ieeeAddress: d.ieeeAddress, friendlyName: d.friendlyName, displayLabels: d.displayLabels ?? {}, properties };
@@ -162,6 +162,16 @@ function resolvePropertyLabel(device: DeviceOption, property: string): string {
     return prop.label;
 }
 
+// Coerce a string value coming from a dropdown/input into the right JS type for
+// comparison against MQTT state. "true"/"false" → bool (binary sensors like
+// presence), numeric strings → number (illuminance, temperature), else string.
+function coerceValue(s: string): unknown {
+    if (s === "true") return true;
+    if (s === "false") return false;
+    if (s !== "" && !isNaN(Number(s))) return Number(s);
+    return s;
+}
+
 export const Component = () => {
     const { data } = useLoader<AutomationEditData>();
     const navigate = useNavigate();
@@ -216,14 +226,12 @@ export const Component = () => {
             return { type: "time_range", from: addCondFrom.value, to: addCondTo.value };
         }
         if (!addCondDevice.value || !addCondProperty.value) return null;
-        let value: any = addCondValue.value;
-        if (!isNaN(Number(value)) && value !== "") value = Number(value);
         return {
             type: "device_state",
             ieeeAddress: addCondDevice.value,
             property: addCondProperty.value,
             operator: addCondOperator.value as any,
-            value,
+            value: coerceValue(addCondValue.value),
         };
     };
 
@@ -282,7 +290,7 @@ export const Component = () => {
                 ieeeAddress: triggerDevice.value,
                 property: triggerProperty.value,
                 operator: triggerOperator.value as any,
-                value: triggerValue.value || null,
+                value: triggerValue.value ? coerceValue(triggerValue.value) : null,
             };
         }
 
@@ -301,13 +309,18 @@ export const Component = () => {
         navigate("/automations");
     }, [automation]);
 
-    const getDeviceProps = (ieee: string) => {
-        return devices.find((d) => d.ieeeAddress === ieee)?.properties ?? [];
+    // Trigger and condition device_state work on READABLE properties (access & 1).
+    const getReadableProps = (ieee: string) => {
+        return (devices.find((d) => d.ieeeAddress === ieee)?.properties ?? [])
+            .filter((p) => (p.access & 1) !== 0);
     };
 
     const getDeviceName = (ieee: string) => {
         return devices.find((d) => d.ieeeAddress === ieee)?.friendlyName ?? ieee;
     };
+
+    // Devices that can be triggers/conditions: must have at least one readable property.
+    const readableDevices = devices.filter((d) => d.properties.some((p) => (p.access & 1) !== 0));
 
     return (
         <div>
@@ -403,7 +416,7 @@ export const Component = () => {
                     <div class={css.row}>
                         <div class={css.fieldSmall}>
                             <Select
-                                options={[{ value: "", label: "Device..." }, ...devices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
+                                options={[{ value: "", label: "Device..." }, ...readableDevices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
                                 value={triggerDevice.value}
                                 onChange={(v) => { triggerDevice.value = v; triggerProperty.value = ""; }}
                                 size="small"
@@ -412,7 +425,7 @@ export const Component = () => {
                         {triggerDevice.value && (
                             <div class={css.fieldSmall}>
                                 <Select
-                                    options={[{ value: "", label: "Property..." }, ...getDeviceProps(triggerDevice.value).map((p) => ({ value: p.property, label: resolvePropertyLabel(devices.find((d) => d.ieeeAddress === triggerDevice.value)!, p.property) }))]}
+                                    options={[{ value: "", label: "Property..." }, ...getReadableProps(triggerDevice.value).map((p) => ({ value: p.property, label: resolvePropertyLabel(devices.find((d) => d.ieeeAddress === triggerDevice.value)!, p.property) }))]}
                                     value={triggerProperty.value}
                                     onChange={(v) => { triggerProperty.value = v; }}
                                     size="small"
@@ -517,7 +530,7 @@ export const Component = () => {
                     <div class={css.row}>
                         <div class={css.fieldSmall}>
                             <Select
-                                options={[{ value: "", label: "Device..." }, ...devices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
+                                options={[{ value: "", label: "Device..." }, ...readableDevices.map((d) => ({ value: d.ieeeAddress, label: d.friendlyName }))]}
                                 value={addCondDevice.value}
                                 onChange={(v) => { addCondDevice.value = v; addCondProperty.value = ""; }}
                                 size="small"
@@ -527,7 +540,7 @@ export const Component = () => {
                             <>
                                 <div class={css.fieldSmall}>
                                     <Select
-                                        options={[{ value: "", label: "Property..." }, ...getDeviceProps(addCondDevice.value).map((p) => ({ value: p.property, label: resolvePropertyLabel(devices.find((d) => d.ieeeAddress === addCondDevice.value)!, p.property) }))]}
+                                        options={[{ value: "", label: "Property..." }, ...getReadableProps(addCondDevice.value).map((p) => ({ value: p.property, label: resolvePropertyLabel(devices.find((d) => d.ieeeAddress === addCondDevice.value)!, p.property) }))]}
                                         value={addCondProperty.value}
                                         onChange={(v) => { addCondProperty.value = v; }}
                                         size="small"
